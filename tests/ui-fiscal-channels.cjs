@@ -1,0 +1,24 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const button={disabled:false};
+const form=()=>({dataset:{},elements:{key:{value:'1'.repeat(44)}},querySelectorAll:()=>[button],reset(){}});
+const nodes={'#main':{innerHTML:''},'#fiscal-refresh':{},'#nfce-import':form(),'#nfce-resolve':form(),'#nfce-import-result':{},'#nfce-resolve-result':{}};
+let resolveRequest,posts=0,pending;
+const ctx={cid:'a',page:'fiscalchannels',viewEpoch:1,$:q=>nodes[q],$$:()=>[],heading:()=>'',esc:x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),date:()=>'',encodeURIComponent,FormData:class{set(){}},action:f=>(pending=f()),api:async(path,options)=>{if(path.startsWith('/fiscal/channels?'))return {items:[]};posts++;return new Promise(r=>resolveRequest=r)}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('app/static/fiscal-channels.js','utf8'),ctx);
+(async()=>{
+ await ctx.renderFiscalChannels();const resolve=nodes['#nfce-resolve'];const e={target:resolve,preventDefault(){}};
+ resolve.onsubmit(e);resolve.onsubmit(e);assert.equal(posts,1);assert(button.disabled);
+ ctx.cid='b';resolveRequest({verified:true,url:'https://official.test',uf:'SP',message:'ok'});await pending;
+ assert.equal(nodes['#nfce-resolve-result'].innerHTML,undefined);assert(!button.disabled);
+ ctx.cid='a';resolve.onsubmit(e);resolveRequest({verified:false,url:'javascript:alert(1)',uf:'<script>',message:'<img>'});await pending;
+ assert(!nodes['#nfce-resolve-result'].innerHTML.includes('href='));assert(nodes['#nfce-resolve-result'].innerHTML.includes('&lt;script>'));
+ const original=nodes['#main'].innerHTML;
+ ctx.api=()=>new Promise(r=>resolveRequest=r);const render=ctx.renderFiscalChannels();ctx.page='history';resolveRequest({items:[]});await render;
+ assert.equal(nodes['#main'].innerHTML,original);
+ ctx.page='fiscalchannels';let resolutions=[];ctx.api=()=>new Promise(r=>resolutions.push(r));
+ const first=ctx.renderFiscalChannels(),second=ctx.renderFiscalChannels();
+ resolutions[1]({items:[]});await second;
+ nodes['#main'].innerHTML='newer UI';resolutions[0]({items:[]});await first;
+ assert.equal(nodes['#main'].innerHTML,'newer UI');
+ console.log('PASS fiscal channels stale company/page, duplicate action and unverified URL suppression');
+})().catch(e=>{console.error(e);process.exitCode=1});

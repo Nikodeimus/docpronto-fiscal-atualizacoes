@@ -1,0 +1,53 @@
+DOCPRONTO FISCAL 1.8.23 — CONTAS E EQUIPES
+
+ORGANIZAÇÃO E CONTA INDIVIDUAL
+Na tela de entrada, Criar organização permite informar nome da organização,
+e-mail e senha de pelo menos 12 caracteres. Em Cadastros, selecione sua
+organização e cadastre os CNPJs/CPFs. Organizações diferentes têm dados
+separados, mesmo quando cadastram o mesmo CNPJ.
+Quem já está conectado também pode criar uma organização em Organização e equipe.
+Para trabalhar nos mesmos dados de outra pessoa, aceite um convite da organização
+existente. Criar outra organização não compartilha os cadastros automaticamente.
+
+CONVIDAR UMA PESSOA
+O administrador da organização abre Organização e equipe > Gerenciar equipe,
+informa o e-mail e escolhe Administrador, Operador ou Somente leitura.
+Gere e copie o link. O sistema não envia e-mail automaticamente.
+A pessoa abre o convite: se ainda não tem conta nesta instalação, cria a senha;
+se já tem, entra primeiro com a conta correspondente ao e-mail convidado.
+Depois aceita o convite. Convites valem por sete dias, são de uso único
+e podem ser revogados antes do uso. Convite expirado precisa ser substituído.
+Os membros recebem acesso aos cadastros atuais e futuros da organização.
+
+PERFIS E ADMINISTRAÇÃO
+Administrador: administra a equipe e os cadastros da organização.
+Operador: trabalha nos dados, sem administrar a equipe.
+Somente leitura: consulta os dados permitidos, sem alterar os cadastros.
+O administrador pode alterar o perfil ou remover integrantes. O proprietário
+é protegido contra remoção e alteração de perfil por esses controles.
+Remover um integrante revoga seu acesso aos cadastros da organização e os
+convites pendentes daquele e-mail nela. A conta não é excluída; acessos a outras
+organizações são preservados. Para voltar, a pessoa precisa de novo convite.
+O administrador da organização não se torna administrador da instalação.
+Rede, backup/restauração de todas as organizações e atualizações são controles
+do administrador da instalação, criado no primeiro acesso.
+
+USAR EM OUTRO COMPUTADOR
+Todos devem acessar a MESMA instalação para compartilhar a equipe e seus dados.
+A central mantém o banco no próprio disco e precisa ficar ligada com o programa
+em execução. Os demais computadores usam o navegador e suas próprias contas.
+Configure a rede conforme CENTRAL-E-MANUTENCAO.txt. Gere o convite acessando
+pelo endereço compartilhado da central: um link com localhost ou 127.0.0.1
+aponta para o próprio computador de quem o abre e não serve para outra máquina.
+Instalações independentes não sincronizam contas, certificados nem documentos.
+Uma instalação nova usa o token do instalador para criar seu administrador.
+Este pacote não configura hospedagem pela internet. O canal público de versões
+distribui software; não hospeda os documentos nem o banco fiscal da equipe.
+
+ATUALIZAÇÃO E CADASTRO PÚBLICO
+Atualizar a instalação existente preserva seus dados persistentes.
+Empresas já vinculadas a clientes continuam na organização correspondente;
+cadastros sem vínculo mantêm as permissões existentes.
+A configuração de servidor DOCPRONTO_ALLOW_SIGNUP=0 desabilita novos cadastros
+públicos. Convites e criação de organizações por pessoas autenticadas continuam
+ disponíveis. Essa configuração exige administração do servidor.

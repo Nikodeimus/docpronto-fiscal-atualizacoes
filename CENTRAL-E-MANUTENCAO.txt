@@ -1,0 +1,93 @@
+DOCPRONTO FISCAL 1.8.23 — CENTRAL E MANUTENÇÃO
+
+UMA CENTRAL PARA A REDE PRIVADA
+Escolha o computador Windows que manterá a instalação e os dados. Os demais
+computadores acessam essa central pelo navegador; não precisam de uma cópia
+do banco. Mantenha o DocPronto em execução e evite suspensão da central durante
+o trabalho. O computador do certificado também precisa manter o conector ativo.
+
+No computador central, entre como administrador da instalação e abra
+Conexões e manutenção > Acesso da equipe pela rede:
+1. Marque Permitir acesso pela rede privada da empresa.
+2. Informe o nome do computador central ou seu IPv4 privado, sem http://,
+   porta ou caminho. Separe nomes/endereços adicionais por vírgula.
+3. Salve e termine as operações em andamento.
+4. Use Encerrar DocPronto Local e reabra o programa na central.
+5. Use os endereços exibidos pelo sistema nos navegadores da equipe.
+
+O acesso continua exigindo login e permissões da organização. Compartilhe o
+endereço da central, não a senha de uma conta. Gere convites por esse endereço.
+Se o endereço IP da central mudar, atualize a configuração e os links usados.
+O endereço 127.0.0.1:8080 é somente para acesso no próprio computador central.
+
+FIREWALL DO WINDOWS
+A rede Windows deve estar classificada como Privada e ser uma rede confiável
+da empresa. Na central, abra PowerShell como administrador e, na pasta extraída
+do pacote, execute:
+  .\scripts\enable-private-lan.ps1
+O script permite entrada TCP na porta 8080 somente no perfil Private, com origem
+LocalSubnet (sub-rede local), e bloqueia travessia de borda nessa regra.
+Ele não habilita a configuração do aplicativo; faça também os passos acima.
+Para remover essa regra, execute como administrador:
+  .\scripts\enable-private-lan.ps1 -Disable
+Para voltar ao uso individual, desmarque a opção de rede no site, salve e reinicie.
+Não abra portas no roteador. Esse modo usa HTTP na rede privada, não oferece
+HTTPS ou hospedagem pública e não deve ser exposto diretamente à internet.
+
+BACKUP COMPLETO LOCAL
+Em Conexões e manutenção > Backup completo e restauração, o administrador
+da instalação pode criar uma cópia, ajustar o intervalo e restaurar uma cópia.
+A cópia inclui o banco e toda a pasta de dados: documentos, arquivos fiscais
+e o cofre A1 existente, de todas as organizações da instalação. Não é uma cópia
+do Windows, dos drivers, dos certificados instalados no Windows ou de tokens A3.
+Também não substitui uma cópia separada das configurações da instalação.
+
+O padrão é automático a cada 24 horas, enquanto o DocPronto está executando.
+A primeira verificação ocorre cinco minutos após abrir o programa; depois há
+verificações periódicas. O backup começa se não houver cópia anterior ou se o
+intervalo configurado já venceu. Não é um agendamento em hora fixa e não roda
+com o programa encerrado. A preferência aceita intervalos de 6 a 168 horas.
+Fechar somente a aba do navegador mantém o programa em execução.
+O backup interrompe brevemente o site e a fila, copia os dados e reinicia o fiscal.
+O tempo varia conforme o volume de arquivos e a velocidade do disco.
+Confirme o resultado e a data da última cópia na tela, especialmente após erros.
+
+As cópias completas ficam em:
+  %LOCALAPPDATA%\DocProntoLocal\backups\full
+Cada cópia concluída tem sua pasta e manifesto com verificações de integridade.
+A cópia fica no mesmo computador: perda do disco pode perder dados e backups.
+Copie as pastas de backups concluídos para armazenamento externo protegido,
+conforme a política da empresa. Não há envio automático para outro disco,
+pasta de rede ou serviço de internet configurado por este recurso.
+Proteja as cópias porque contêm dados de todas as organizações e material sensível.
+
+RESTAURAR
+A restauração substitui os dados atuais de TODAS as organizações pelos dados
+da cópia escolhida. Alterações posteriores àquela cópia deixam de estar no banco
+ativo. Combine a parada com a equipe antes de executar.
+Na lista de backups, escolha Restaurar esta cópia, confira a identificação e
+informe a confirmação solicitada e sua senha atual de LOGIN de administrador.
+Não é a senha do certificado nem uma senha curta de exclusão.
+O sistema valida a cópia e cria um backup preventivo do estado atual antes de
+substituí-lo. O fiscal reinicia e exige novo login. Use uma conta que existia
+na cópia restaurada. Se houver erro, consulte a situação e os logs antes de repetir.
+O backup preventivo permanece na lista para recuperação dos dados anteriores.
+
+PROGRESSO E CONFERÊNCIA FISCAL
+A barra de captura representa o lote processado, não uma auditoria de completude
+fiscal. Quando há total conhecido e amostras suficientes, o tempo restante é
+estimado; pausas, limites da SEFAZ, PIN e conexão podem alterar ou suspender o cálculo.
+Na busca de histórico por NSU, o total pode ser desconhecido. O sistema informa
+essa limitação em vez de prometer um prazo para todo o histórico.
+A visão mensal mostra XMLs, resumos e eventos separadamente, inclusive meses
+sem registros. Nem um mês vazio nem uma consulta concluída comprovam cobertura
+completa. Compare os arquivos com seus controles e com a disponibilidade da fonte.
+Certificados com validade conhecida recebem aviso quando faltam até 30 dias;
+vencidos e validade desconhecida devem ser conferidos separadamente.
+
+ATUALIZAR E DIAGNOSTICAR
+O download de atualização pode ocorrer em segundo plano. Aplicar a nova versão
+reinicia o site: conclua edições e avise a equipe. Leia ATUALIZACOES.txt.
+Os controles automáticos dependem da instalação local em execução.
+Logs: %LOCALAPPDATA%\DocProntoLocal\logs, incluindo backups.log e backup-restart.log.
+Não publique arquivos de dados, configurações secretas ou certificados ao pedir ajuda.

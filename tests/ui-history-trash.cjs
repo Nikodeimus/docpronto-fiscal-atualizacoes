@@ -1,0 +1,7 @@
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const source=fs.readFileSync('app/static/history-trash.js','utf8');
+function setup(){let resolve,opens=0;const button={dataset:{restoreHistory:'batch'}},controls={};const host={innerHTML:'',isConnected:true,querySelector:id=>controls[id]??(controls[id]={}),querySelectorAll:()=>[button]};const ctx={cid:'a',document:{getElementById:()=>host},api:()=>new Promise(r=>resolve=r),esc:s=>String(s).replaceAll('<','&lt;'),date:String,modal:()=>{opens++;return()=>true},action:f=>f()};vm.createContext(ctx);vm.runInContext(source,ctx);return {ctx,host,button,resolve:r=>resolve(r),opens:()=>opens}}
+const result={total:1,items:[{id:'batch',created:1,total:1,pending:1,restored:0,duplicates:0}],message:'Somente exclusões novas'};
+test('trash ignores delayed response after company change',async()=>{const x=setup(),p=x.ctx.mountHistoryTrash('a',()=>true);x.ctx.cid='b';x.resolve(result);await p;assert.equal(x.host.innerHTML,'')});
+test('trash button cannot restore in a different company',async()=>{const x=setup(),p=x.ctx.mountHistoryTrash('a',()=>true);x.resolve(result);await p;assert.match(x.host.innerHTML,/Restaurar este lote/);x.ctx.cid='b';x.button.onclick();assert.equal(x.opens(),0)});
+test('trash server messages escaped',async()=>{const x=setup(),p=x.ctx.mountHistoryTrash('a',()=>true);x.resolve({...result,message:'<img src=x>'});await p;assert.match(x.host.innerHTML,/&lt;img/);assert.doesNotMatch(x.host.innerHTML,/<img/)});

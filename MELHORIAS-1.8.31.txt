@@ -1,0 +1,18 @@
+DocPronto local 1.8.31
+
+NOVO: Outros documentos fiscais
+CT-e: canal de distribuição pelo certificado, NSU independente de NF-e, consultas e recibos preservados, habilitação e pausa por empresa. O conector deve ser atualizado junto com o aplicativo.
+NFC-e: importação XML/ZIP modelo 65 nas 27 UFs, conferindo emitente/destinatário identificado, modelo, chave e protocolo. Originais preservados e duplicados evitados. Assinatura XML não verificada no importador.
+Consulta NFC-e: links oficiais revisados SP/MG/PR/RS. Demais 23 UFs explicitamente sem endereço verificado. Consulta pública não é download automático de XML.
+Ciência da Emissão: envio individual 210210 para nota com destinatário comprovado, mediante autorização específica por empresa. Não equivale à confirmação da operação. Não houve eventos fiscais reais durante os testes.
+NFS-e: não habilitada; contrato autenticado do ADN ainda precisa ser validado. Não são presumidos formatos de retorno nem cobertura dos municípios.
+
+LIMITES
+Ainda pendem Ciência automática a partir de resumos, integração nacional NFS-e, revisão das consultas públicas NFC-e das outras UFs e validação real dos novos protocolos junto aos serviços fiscais. Arquivos de CT-e/NFC-e e eventos ficam separados da listagem NF-e nesta versão.
+
+FONTES
+https://www.cte.fazenda.gov.br/portal/
+https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual
+https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/apis-prod-restrita-e-producao
+https://www.nfe.fazenda.gov.br/portal/
+Veja docs/NFCE_COBERTURA.md para referências estaduais.

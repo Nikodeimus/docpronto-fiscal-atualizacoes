@@ -1,0 +1,29 @@
+DocPronto local — atualização 1.8.30
+
+Melhorias implementadas
+- Consulta prévia das condições locais: conector, certificado, UF, consulta em andamento e espera registrada da SEFAZ.
+- Horário diário de Brasília, intervalo contínuo de 1 a 24 horas e prioridade por cadastro. Mantém o NSU; prioridade não impede outros cadastros de avançar.
+- Ficha única da nota com versões, origem registrada, integridade, protocolos e eventos; disponibilidade do arquivo separada da situação fiscal.
+- Busca por chave, número, emitente ou documento; comparação com lista externa de chaves.
+- Filtros por dias e meses, atalhos de período e preferências individuais por usuário e empresa.
+- Importação de XML/ZIP no histórico, com relatório e controle de duplicados. XML deve corresponder ao cadastro; eventos externos devem se vincular a uma nota já preservada.
+- Exportação organizada e com conferência de integridade.
+- Lixeira para exclusões do histórico feitas a partir desta versão, com restauração por lote e verificação do arquivo original.
+- Ensaio isolado de restauração de backups, incluindo banco, estrutura, arquivos e hashes.
+- Menu agrupado, modo compacto, botões padronizados e avisos de certificados que podem ser marcados como vistos.
+- Matriz das 27 UFs e fontes oficiais, distinguindo captura integrada de consulta externa.
+
+Limites verificados
+- A captura automática integrada continua sendo de NF-e. CT-e, NFC-e e NFS-e exigem integrações próprias e aparecem como ainda não integrados.
+- Importar uma lista ou concluir uma consulta não comprova cobertura integral do período.
+- Não foi implementado envio automático de Ciência da Emissão nem de outros eventos fiscais.
+- A situação na ficha é baseada nos protocolos preservados; a assinatura digital não é apresentada como verificada.
+- A lixeira não recupera automaticamente exclusões anteriores à instalação desta versão.
+- Verificar um backup não substitui copiar backups para outro disco. O ensaio não testa portabilidade do certificado nem comunicação SEFAZ.
+- Testes de interface automatizados foram executados. O navegador de conferência visual falhou com timeout de Page.navigate.
+
+Fontes oficiais consultadas em 29/09/2026
+Portal NF-e e serviços: https://www.nfe.fazenda.gov.br/portal/webServices.aspx?tipoConteudo=OUC%2FYVNWZfo%3D
+Consulta NFC-e por UF/QR Code: https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=DdSDvm4LtCI%3D
+Distribuição CT-e (serviço próprio): https://www.cte.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=5c1PwLTdrCA%3D
+NFS-e documentação atual: https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual

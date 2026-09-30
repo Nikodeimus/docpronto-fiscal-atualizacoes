@@ -1,0 +1,6 @@
+{
+  "allowedHosts": [],
+  "allowedPathPrefixes": [],
+  "timeoutSeconds": 60,
+  "maxResponseBytes": 33554432
+}

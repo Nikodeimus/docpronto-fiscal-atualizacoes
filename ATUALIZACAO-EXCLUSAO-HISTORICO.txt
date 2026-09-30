@@ -1,0 +1,25 @@
+EXCLUSAO DO HISTORICO FISCAL
+
+INSTALAR
+1. Extraia esta atualizacao na pasta do pacote original, junto de
+   INSTALAR-LOCAL-SEM-DOCKER.vbs. Aceite substituir os arquivos.
+2. Execute INSTALAR-LOCAL-SEM-DOCKER.vbs e clique em Instalar / Atualizar.
+3. Atualize a pagina do navegador com Ctrl+F5.
+
+USAR
+No Historico fiscal, abra Excluir historico fiscal.
+Marque arquivos na tabela para excluir os selecionados, ou use Excluir todo
+o historico deste CNPJ/CPF (inclui todos os meses e paginas).
+Confirme a empresa, a quantidade exata e a senha de exclusao.
+A senha e cadastrada em Meus dados. Apenas administradores podem excluir.
+
+A exclusao remove registros do historico, downloads e exportacoes ZIP/TXT.
+Os arquivos fisicos seguem a politica de retencao da instalacao, como em
+Documentos. Nao e apagamento fisico definitivo das copias no disco/backups.
+Documentos, cadastros, certificados, ultimo NSU e intervalos sao preservados.
+Novas capturas ou arquivamentos podem adicionar arquivos novamente.
+A exclusao nao garante que a SEFAZ reenvie o que foi removido.
+
+Inclui as correcoes anteriores do instalador, captura ICMS e TXT de chaves.
+Validacao: 8 testes do historico e 5 testes JavaScript aprovados;
+verificacao de sintaxe JavaScript aprovada. Instalacao Windows pendente.

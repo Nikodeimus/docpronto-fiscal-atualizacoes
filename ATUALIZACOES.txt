@@ -1,0 +1,36 @@
+DOCPRONTO FISCAL 1.8.23 — ATUALIZAÇÕES PELO PRÓPRIO SISTEMA
+
+PRIMEIRA INSTALAÇÃO DESTA REVISÃO
+Extraia o pacote e execute INSTALAR-LOCAL-SEM-DOCKER.cmd uma vez.
+O instalador preserva os dados locais e configura o canal público se ainda não houver uma fonte escolhida.
+
+DEPOIS DE INSTALADO
+Abra Conexões e manutenção > Atualizações do fiscal.
+Mantenha Verificar e baixar automaticamente marcado. A verificação ocorre ao iniciar e a cada seis horas enquanto o programa estiver aberto.
+Quando aparecer Atualização pronta, clique Aplicar e reiniciar site. Não é necessário baixar ou extrair outro ZIP manualmente.
+O download não interrompe seu trabalho. Aplicar reinicia o fiscal; conclua suas edições antes de clicar.
+
+CANAL PÚBLICO
+https://github.com/Nikodeimus/docpronto-fiscal-atualizacoes/releases
+Fonte configurada:
+https://github.com/Nikodeimus/docpronto-fiscal-atualizacoes/releases/latest/download/latest.json
+
+Uma nova versão precisa ser publicada nesse canal para aparecer no programa.
+O conector de certificados permanece separado. Este atualizador trata do site/fila fiscal local, sem Docker.
+
+FALHA NA ATUALIZAÇÃO
+O pacote e seus arquivos são conferidos por SHA-256 antes da instalação.
+A instalação salva uma cópia do banco antes da troca. Se a nova instância falhar, tenta recuperar o banco e a versão anterior. A tentativa malsucedida é preservada para diagnóstico.
+Os arquivos fiscais continuam na pasta de dados persistente.
+A tela informa o resultado; logs ficam em %LOCALAPPDATA%/DocProntoLocal/updates e logs.
+Sem internet, a instalação existente continua funcionando; a consulta de versões pode ser repetida depois.
+
+CANAL LOCAL OPCIONAL
+scripts/publish-update.py publica atomicamente um ZIP validado em uma pasta com latest.json.
+A fonte também aceita essa pasta ou arquivo JSON local.
+scripts/update-server.py oferece feed/download local e pode ficar atrás de um servidor HTTPS; não é necessário para o canal GitHub.
+
+MANUTENÇÃO DA CENTRAL
+Consulte CENTRAL-E-MANUTENCAO.txt para rede privada, backup completo e restauração.
+A cópia do banco feita antes de atualizar não substitui o backup completo dos dados.
+Contas e permissões estão descritas em CONTAS-E-EQUIPES.txt.

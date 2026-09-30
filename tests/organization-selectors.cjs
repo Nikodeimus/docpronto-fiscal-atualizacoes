@@ -1,0 +1,20 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('app/static/app.js','utf8');
+const code=source.slice(source.indexOf('let orgScope=null;'),source.indexOf('function mountOrganizationForms()'));
+class Select{set innerHTML(v){this.html=v;this.value=(v.match(/value="([^"]*)"/)||[])[1]||''}get innerHTML(){return this.html}}
+const nodes={};const ctx={org:{providers:[{id:'p',name:'Zeta'},{id:'empty',name:'Alfa'}],clients:[{id:'a',provider_id:'p',name:'A'},{id:'b',provider_id:'p',name:'B'}]},companies:[{id:'1',name:'Primeiro',document:'111',provider_id:'p',client_id:'a'},{id:'2',name:'Outro',document:'222',provider_id:'p',client_id:'b'}],cid:'1',$:s=>nodes[s]??=(new Select()),esc:s=>s,selected:new Set(),action:()=>{},render:()=>{}};
+vm.createContext(ctx);vm.runInContext(code+';mountOrganizationSelectors()',ctx);
+assert.match(nodes['#provider-select'].innerHTML,/empty/);
+assert.match(nodes['#client-select'].innerHTML,/value="b"/);
+assert(!nodes['#company-select'].innerHTML.includes('222'));
+nodes['#provider-select'].value='empty';nodes['#provider-select'].onchange();
+assert.equal(ctx.cid,'');assert(!nodes['#company-select'].innerHTML.includes('111'));
+vm.runInContext('mountOrganizationSelectors()',ctx);assert.equal(nodes['#provider-select'].value,'empty');
+console.log('Selector isolation and empty provider persistence passed');
+assert.equal(ctx.historyPage,1,'company/provider change resets history page');
+assert.equal(ctx.historyMonth,'','company/provider change clears old month filter');
+assert.equal(ctx.historyMonthTo,'','company/provider change clears end month');
+ctx.companies.push({id:'3',name:'Sem cliente',document:'333',provider_id:'p',client_id:null});
+ctx.cid='3';vm.runInContext('orgScope=null;mountOrganizationSelectors()',ctx);
+assert.equal(ctx.cid,'3');assert.match(nodes['#client-select'].innerHTML,/Sem cliente definido/);
+assert.equal(nodes['#client-select'].value,'');assert.equal(ctx.scopedCompanies()[0].id,'3');

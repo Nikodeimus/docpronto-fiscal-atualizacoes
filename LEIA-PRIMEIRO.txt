@@ -1,0 +1,67 @@
+DOCPRONTO FISCAL 1.8.23 — LEIA PRIMEIRO
+
+INSTALAR OU ATUALIZAR
+1. Extraia TODO o ZIP em uma pasta própria, por exemplo C:\DocProntoPacote.
+   Não execute o instalador dentro do ZIP.
+2. Execute INSTALAR-LOCAL-SEM-DOCKER.vbs. Se necessário, use o arquivo .cmd
+   de mesmo nome. O pacote inclui o runtime; não exige Docker ou WSL.
+3. Na central, abra http://127.0.0.1:8080 ou o atalho DocPronto Local.
+4. Na primeira instalação, use o token apresentado pelo instalador e crie
+   o administrador com e-mail e senha de pelo menos 12 caracteres.
+5. Nas próximas vezes, use seu e-mail e senha. Não compartilhe sua conta.
+
+A instalação usa %LOCALAPPDATA%\DocProntoLocal no perfil Windows da central.
+O banco fica em data\app.db e os arquivos persistentes ficam em data.
+Atualizar essa instalação preserva seus dados. Instalar em outro computador
+ou perfil Windows cria uma instalação independente; não sincroniza dados.
+O instalador não importa automaticamente o banco de uma instalação Docker.
+
+CENTRAL E EQUIPE
+Por padrão, o site atende somente o próprio computador. Para a equipe usar
+os mesmos dados, configure o acesso pela rede privada em Conexões e manutenção
+> Acesso da equipe pela rede. Mantenha a central ligada e o DocPronto em execução.
+Os demais computadores acessam a central pelo navegador com contas individuais.
+Leia CENTRAL-E-MANUTENCAO.txt antes de habilitar a rede e CONTAS-E-EQUIPES.txt
+para criar organizações, convidar pessoas e administrar os perfis de acesso.
+Isso não publica o sistema na internet.
+
+CAPTURA, PROGRESSO E HISTÓRICO
+Em Buscar notas, escolha o certificado da empresa e o período desejado.
+Para um único mês, preencha apenas o mês inicial. Para um intervalo, informe
+inicial e final. A SEFAZ define a disponibilidade e a retenção dos documentos;
+o período solicitado não garante recuperar todos os documentos daqueles meses.
+A barra acompanha o processamento do lote. Uma estimativa de tempo, quando
+possível, usa respostas já recebidas e pode mudar. Sem total conhecido do
+histórico, o sistema não apresenta um prazo ou percentual fictício de conclusão.
+Espera da SEFAZ, conector desconectado e solicitação de PIN podem impedir avanço.
+No Histórico fiscal, ZIP e TXT respeitam o filtro aplicado de mês ou intervalo.
+A cobertura mensal separa XMLs completos, resumos e eventos, incluindo meses
+sem registros. Mês vazio não prova ausência de notas; mês com registros ou
+consulta concluída também não comprova cobertura fiscal completa.
+
+CERTIFICADOS
+O conector deve estar aberto no computador do certificado, com os drivers
+necessários. A3 pode solicitar PIN na janela do provedor do Windows.
+O aviso de vencimento em até 30 dias ajuda a planejar a renovação. Certificados
+vencidos são indicados separadamente; validade não informada não confirma validade.
+Confira o certificado associado a cada CNPJ/CPF antes de iniciar a captura.
+As consultas à SEFAZ dependem de internet, autorização e disponibilidade da fonte.
+
+BACKUP E ATUALIZAÇÕES
+Conexões e manutenção reúne backup completo, restauração e atualizações.
+Na instalação local, o backup automático vem habilitado a cada 24 horas:
+a primeira verificação ocorre após cinco minutos de execução do DocPronto.
+Se ainda não houver cópia ou o intervalo vencer, o programa inicia o backup.
+O site e a fila param brevemente e reiniciam para manter a cópia consistente.
+O backup fica no disco da central; não é uma cópia externa nem um serviço online.
+Leia CENTRAL-E-MANUTENCAO.txt para alcance, restauração e proteção das cópias.
+O canal de atualizações pode baixar uma nova versão em segundo plano;
+você escolhe quando aplicar e reiniciar. Consulte ATUALIZACOES.txt.
+
+ENCERRAR E DIAGNOSTICAR
+Fechar a aba do navegador não encerra o servidor. Use Encerrar DocPronto Local
+para pará-lo e o atalho do programa para reabrir. O site precisa estar executando
+para atender a equipe e realizar as verificações automáticas.
+Em caso de falha, use Verificar instalação em Conexões e manutenção e consulte
+os logs em %LOCALAPPDATA%\DocProntoLocal\logs. Não compartilhe senhas, arquivos
+local.json, PRIMEIRO-ACESSO.txt, certificados ou dados fiscais em diagnósticos públicos.

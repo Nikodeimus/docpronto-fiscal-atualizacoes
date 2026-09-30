@@ -1,0 +1,17 @@
+DOCPRONTO FISCAL 1.8.23 — VALIDAÇÃO DA REVISÃO, 26/09/2026
+
+No ambiente Windows de desenvolvimento, com banco temporário isolado:
+- 369 testes Python aprovados; 1 ignorado pela condição do ambiente.
+- 12 suítes JavaScript aprovadas.
+- Interface conferida no navegador com dados fictícios: progresso, preservação
+  do formulário, filtro mensal, certificados e diagnóstico; sem erros de console.
+- Testes de backup/restauração, falhas e recuperação, gestão de equipe,
+  isolamento entre empresas, configuração de rede e rollback do instalador.
+- O empacotador confere CRC e SHA-256 de todos os arquivos do manifesto.
+
+A validação automatizada não representa uma consulta real à SEFAZ nem
+um teste de cartão/token A3. Total do histórico e prazo de término podem
+ser desconhecidos. O diagnóstico distingue resposta anterior de teste atual.
+
+Dados fiscais, bancos, certificados privados e testes não integram o pacote.
+Consulte CENTRAL-E-MANUTENCAO.txt e CONTAS-E-EQUIPES.txt para operação.

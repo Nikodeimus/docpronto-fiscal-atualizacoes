@@ -1,0 +1,22 @@
+CORRECAO: CAPTURA COM AVISO DE ICMS
+
+1. Feche o instalador anterior e extraia esta atualizacao na pasta do
+   pacote original, onde esta INSTALAR-LOCAL-SEM-DOCKER.vbs.
+2. Aceite substituir os arquivos e execute Instalar / Atualizar.
+3. No sistema, use Repetir falhas no lote pausado e retome a captura.
+   Os intervalos recebidos da SEFAZ continuam respeitados.
+
+O XML original e sua chave ficam no Historico fiscal mesmo quando o leitor
+nao consegue interpretar os impostos. O aviso identifica a pendencia; o
+arquivo nao e marcado como fiscalmente validado. Os demais XMLs continuam
+sendo processados. A leitura detalhada do XML problematico continua pendente.
+A data de emissao disponivel no XML tambem e preservada no historico.
+
+Inclui as atualizacoes anteriores: instalador corrigido e exportacao TXT
+somente com chaves, uma por linha e sem repeticao.
+Os cadastros e arquivos existentes permanecem na pasta de dados.
+
+Validacao: testes reproduziram XML sem grupo ICMS seguido de XML legivel,
+preservacao exata do original, exportacao TXT, NSU e retorno duplicado,
+tanto na captura para Documentos quanto no modo somente Historico.
+Consulta real a SEFAZ e confirmacao no Windows pendentes.

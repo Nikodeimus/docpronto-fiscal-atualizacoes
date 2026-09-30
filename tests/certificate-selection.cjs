@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync('app/static/app.js','utf8');
+const start=source.indexOf('function mountCaptureCertificatePicker(');
+const end=source.indexOf('\nasync function renderMyData',start);
+const elements={};
+for(const key of ['#capture-cert','#capture-cert-search','#capture-cert-detail','#capture-cert-count'])elements[key]={value:'',innerHTML:'',textContent:'',isConnected:true,insertAdjacentHTML(){}};
+const requests=[];
+const context={cid:'company-A',$:s=>elements[s],esc:x=>String(x),certificateInfo:c=>({name:c.subject,document:'',ending:c.thumbprint,tax:''}),certificateLabel:c=>c.subject,toast(){},api:async(path,options)=>{requests.push({path,...options});return {in_flight:false}}};
+vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+context.mountCaptureCertificatePicker([{subject:'Jose Lemo',thumbprint:'B'.repeat(40),store:'CurrentUser',device:'computer-1'}],'company-A');
+context.cid='company-B';elements['#capture-cert'].value='0';
+(async()=>{await elements['#capture-cert'].onchange();assert.equal(requests.length,1);assert.equal(requests[0].body.company,'company-A');assert.equal(requests[0].body.thumbprint,'B'.repeat(40));assert.equal(elements['#capture-cert'].disabled,false);console.log('Seleção persiste no CNPJ de origem mesmo após troca de tela: OK');})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,7 @@
+Python 3.12.10 embeddable x64: https://www.python.org/ftp/python/3.12.10/
+Poppler 26.09.0 Windows build: https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0
+Tesseract 5.4.0 Windows build: https://github.com/UB-Mannheim/tesseract/releases/tag/v5.4.0.20240606
+Portuguese model: https://github.com/tesseract-ocr/tessdata_fast
+Python package licenses preserved in runtime/Lib/site-packages/*.dist-info
+Poppler sources/dependency build: https://github.com/conda-forge/poppler-feedstock
+Tesseract sources/build: https://github.com/UB-Mannheim/tesseract

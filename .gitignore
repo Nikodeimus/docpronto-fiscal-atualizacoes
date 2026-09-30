@@ -1,0 +1,56 @@
+# Dependencias, builds e componentes do instalador
+/runtime/
+/tools/
+**/bin/
+**/obj/
+**/dist/
+node_modules/
+.venv/
+venv/
+*.exe
+*.dll
+*.pdb
+*.zip
+*.7z
+*.msi
+# Manifesto gerado para cada pacote completo de distribuicao
+/local-manifest.json
+# Python e caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+# Dados locais, certificados e credenciais
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+*.db
+*.db-*
+*.sqlite*
+*.log
+/data/
+/backups/
+/logs/
+/profiles/
+/diagnostics*/
+/local.json
+/ready.json
+/active.txt
+/active.previous
+*.lock
+stop.request
+agent-windows/config.json
+# Editor e arquivos temporarios
+.vs/
+.idea/
+*.tmp
+*.bak
+Thumbs.db
+.DS_Store

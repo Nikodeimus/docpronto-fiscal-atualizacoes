@@ -1,0 +1,1 @@
+"""DocPronto self-hosted platform."""

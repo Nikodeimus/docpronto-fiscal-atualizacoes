@@ -1,0 +1,39 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('app/static/app.js','utf8');
+const code=source.slice(source.indexOf('function readInviteToken('),source.indexOf('async function start()'));
+const token='synthetic_invitation_1234567890';
+function harness(){
+ let task;const requests=[],nodes={},controls={};
+ const fields={email:{value:'invited@example.test'},password:{value:'Synthetic password 123!'},name:{value:'Synthetic Team'},role:{value:'viewer'}};
+ const form={dataset:{},isConnected:true,elements:fields,querySelector:selector=>controls[selector]??={disabled:false}};
+ const ctx={pendingInvite:'',authExtraGeneration:0,mountTeamMemberActions(){},allowSignup:true,setup:false,csrf:'',user:null,viewEpoch:0,page:'teams',orgScope:null,esc:String,date:String,encodeURIComponent,
+ $:selector=>nodes[selector]??=(selector.includes('form')||selector==='#accept-invite'||selector==='#new-team'?form:{classList:{toggle(){}},querySelector:()=>form}),
+ $$:()=>[],modal:()=>()=>true,action:fn=>task=fn(),toast(){},enter:async()=>{},heading:()=>'',beginViewRead:()=>()=>true,location:{origin:'https://local.test'},navigator:{clipboard:{writeText:async()=>{}}},
+ api:async(path,opt)=>{requests.push({path,opt});if(path==='/me')return {email:fields.email.value};if(path==='/teams')return [{id:'org1',name:'Our Team',role:'admin'}];if(path.endsWith('/members'))return {members:[{email:'member@example.test',role:'viewer'}],invites:[]};if(path.endsWith('/accept')||path==='/signup')return {csrf:'new-csrf'};return {name:'Inviting organization',expires:1};}};
+ vm.createContext(ctx);vm.runInContext(code,ctx);
+ return {ctx,nodes,form,fields,requests,wait:()=>task};
+}
+(async()=>{
+ let h=harness();assert.equal(h.ctx.readInviteToken('https://example.test/#invite='+token),token);assert.equal(h.ctx.readInviteToken(token),token);assert.throws(()=>h.ctx.readInviteToken('../bad'));
+ h.ctx.showSignup();h.form.onsubmit({preventDefault(){}});await h.wait();assert.deepEqual(JSON.parse(JSON.stringify(h.requests[0])),{path:'/signup',opt:{method:'POST',body:{name:'Synthetic Team',email:'invited@example.test',password:'Synthetic password 123!'}}});assert.equal(h.ctx.csrf,'new-csrf');assert.equal(h.fields.password.value,'');
+ h=harness();await h.ctx.showInvite(token);assert.equal(h.ctx.pendingInvite,token);h.form.onsubmit({preventDefault(){}});await h.wait();let accept=h.requests.find(r=>r.path.endsWith('/accept'));assert.equal(accept.opt.body.email,'invited@example.test');assert(accept.opt.body.password);assert.equal(h.ctx.pendingInvite,'');assert.equal(h.fields.password.value,'');
+ h=harness();h.ctx.pendingInvite=token;h.ctx.user={email:'existing@example.test'};await h.ctx.showInvite(token);h.form.onsubmit({preventDefault(){}});await h.wait();accept=h.requests.find(r=>r.path.endsWith('/accept'));assert.equal(accept.opt.body.email,'existing@example.test');assert(!('password' in accept.opt.body));
+ h=harness();let release;h.ctx.api=()=>new Promise(resolve=>release=resolve);const pending=h.ctx.showInvite(token);h.ctx.pendingInvite='replacement_invite_12345';release({name:'OLD'});await pending;assert(!h.nodes['#auth-extra'],'obsolete invitation response never replaces newer form');
+ h=harness();await h.ctx.renderTeams();assert.match(h.nodes['#main'].innerHTML,/Our Team/);assert.match(h.nodes['#main'].innerHTML,/Gerenciar equipe/);assert.match(h.nodes['#main'].innerHTML,/cliente padrão/);
+ h=harness();let viewCurrent=true,finishRevoke;const revoke={disabled:false,dataset:{revokeInvite:'expired'}};
+ const teamHost={isConnected:true,innerHTML:'',querySelector:()=>h.form,querySelectorAll:()=>[revoke]};h.nodes['#team-members']=teamHost;h.ctx.beginViewRead=()=>()=>viewCurrent;
+ h.ctx.api=async(path,opt)=>{h.requests.push({path,opt});if(path.endsWith('/members'))return {members:[{email:'one@example.test',role:'viewer'},{email:'two@example.test',role:'operator'},{email:'admin@example.test',role:'admin'}],invites:[{id:'expired',email:'old@example.test',role:'viewer',expires:1},{id:'used',email:'used@example.test',role:'operator',expires:1,used_at:10},{id:'revoked',email:'gone@example.test',role:'admin',revoked:true,expires:1}]};return new Promise(resolve=>finishRevoke=resolve)};
+ await h.ctx.showTeamMembers('org1');assert.match(teamHost.innerHTML,/Somente leitura/);assert.match(teamHost.innerHTML,/Operador/);assert.match(teamHost.innerHTML,/Administrador/);assert.match(teamHost.innerHTML,/Expirado/);assert.equal((teamHost.innerHTML.match(/data-revoke-invite=/g)||[]).length,1);
+ const revocation=revoke.onclick();assert.equal(revoke.disabled,true);assert.equal(h.requests.at(-1).path,'/teams/org1/invites/expired/revoke');assert.equal(h.requests.at(-1).opt.method,'POST');viewCurrent=false;finishRevoke({ok:true});await revocation;assert.equal(h.requests.filter(r=>r.path.endsWith('/members')).length,1,'stale revoke must not reopen team');assert.equal(revoke.disabled,false);
+ h=harness();const generatedList={innerHTML:'<p>Nenhum convite listado.</p>',insertAdjacentHTML(position,text){this.innerHTML=text+this.innerHTML}};
+ const output={},copy={},revokeGenerated={removeAttribute(){}};const generationHost={isConnected:true,querySelector:selector=>({'#team-invite':h.form,'#team-invite-result':output,'#team-invite-list':generatedList,'#copy-invite':copy,'#revoke-new-invite':revokeGenerated})[selector],querySelectorAll:()=>[]};h.nodes['#team-members']=generationHost;
+ h.ctx.api=async(path,opt)=>path.endsWith('/members')?{members:[],invites:[]}:{id:'new-id',link:'https://local.test/#invite='+token,expires:123};
+ await h.ctx.showTeamMembers('org1');h.form.onsubmit({preventDefault(){},target:h.form});await h.wait();assert.match(generatedList.innerHTML,/invited@example.test/);assert(!generatedList.innerHTML.includes('Nenhum convite'));assert.match(output.innerHTML,/invite-created-link/);assert.match(output.innerHTML,new RegExp(token));assert.equal(typeof copy.onclick,'function');assert.equal(typeof revokeGenerated.onclick,'function');
+ h=harness();let replaced;h.ctx.location={hash:'#invite='+token,pathname:'/',search:'?test=1'};h.ctx.history={replaceState:(state,title,url)=>replaced=url};await h.ctx.openInviteFromHash();assert.equal(h.ctx.pendingInvite,token);assert.equal(replaced,'/?test=1');assert(h.nodes['#auth-extra']);const requestCount=h.requests.length;h.ctx.location.hash='#documents';await h.ctx.openInviteFromHash();assert.equal(h.requests.length,requestCount);
+ // Execute the actual logout handler and verify account-specific invitation state disappears.
+ const authNodes={};let authConfigured=0;const logoutContext={pendingInvite:token,authExtraGeneration:4,user:{email:'old@example.test'},csrf:'old',viewEpoch:0,poll:1,
+ $:id=>authNodes[id]??={innerHTML:'previous account',classList:{add(){},remove(){}},close(){}},action:fn=>fn(),stopCaptureProgress(){},stopBackupsPoll(){},stopUpdatesPoll(){},api:async()=>({}),disposeBackdropPreview(){},showBackdrop(){},clearInterval(){},configureAuthOptions(){authConfigured++}};
+ vm.createContext(logoutContext);const logoutStart=source.indexOf("$('#logout').onclick");vm.runInContext(source.slice(logoutStart,source.indexOf("$('#company-select').onchange",logoutStart)),logoutContext);await authNodes['#logout'].onclick();assert.equal(logoutContext.pendingInvite,'');assert.equal(logoutContext.user,null);assert.equal(authNodes['#auth-extra'].innerHTML,'');assert.equal(authConfigured,1);
+ const html=fs.readFileSync('app/static/index.html','utf8');assert(html.includes('id="auth-options"'));assert(html.includes('data-page="teams"'));assert(source.includes('if(pendingInvite)await showInvite(pendingInvite)'));
+ console.log('PASS signup payload/session, invitation token, new/existing acceptance, stale responses, teams array contract, signup navigation');
+})().catch(error=>{console.error(error);process.exitCode=1});

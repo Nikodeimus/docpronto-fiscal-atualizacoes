@@ -42,3 +42,20 @@ Uma instalação nova começa sem contas ou documentos de outras pessoas. O prim
 - Atualização integrada com verificação, download e aplicação pelo próprio fiscal.
 
 A recuperação de notas depende da disponibilidade na fonte fiscal; selecionar um período não garante cobertura completa. O conector de certificados permanece um componente separado.
+
+
+## Código-fonte local
+
+Este repositório também contém o código do DocPronto Fiscal local, baseado no pacote 1.8.32.
+
+- `app/`: aplicação Python, interface e motores fiscais.
+- `agent-windows/`: código C# do conector de certificados (.NET 10).
+- `tests/`: testes automatizados e amostras fictícias.
+- `scripts/`: instalação, manutenção e publicação de pacotes.
+- `docs/`: documentação de integrações e contratos oficiais.
+
+Para desenvolvimento, use Python 3.12 em um ambiente virtual e instale `requirements-dev.txt`. Execute `python -m pytest tests` para os testes Python. Os testes de interface `tests/ui-*.cjs` são executados com Node.js. A compilação do conector usa `agent-windows/Build-Windows.ps1` e requer o SDK .NET 10.
+
+O clone contém código-fonte, não um instalador completo: `runtime/`, `tools/`, executáveis e `local-manifest.json` do pacote não são versionados. OCR/PDF e testes que dependem desses componentes exigem suas ferramentas locais. Para instalar o programa pronto, use os arquivos das Releases. Ao montar uma distribuição, gere novamente o manifesto de hashes do pacote completo.
+
+Certificados, senhas, banco de dados e documentos de clientes ficam fora do Git. Os dados da instalação existente não são migrados para este repositório. Esta inclusão de código não publica uma nova versão no canal de atualização.

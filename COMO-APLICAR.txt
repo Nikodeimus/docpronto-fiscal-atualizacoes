@@ -1,0 +1,23 @@
+CORRECAO DO INSTALADOR DOCPRONTO LOCAL 1.8.19
+
+1. Feche o instalador anterior.
+2. Extraia este ZIP na pasta do pacote original ja extraido, a mesma
+   que contem INSTALAR-LOCAL-SEM-DOCKER.vbs.
+3. Aceite substituir scripts/install-local.ps1 e local-manifest.json.
+4. Abra INSTALAR-LOCAL-SEM-DOCKER.vbs e clique em Instalar / Atualizar.
+   O titulo deve mostrar (correcao 1).
+
+Nao extraia em AppData ou na pasta de dados. Esta correcao usa os
+componentes do pacote original; nao precisa baixar o pacote completo.
+
+Alteracao: execucao de check/backup via .NET Process, entrada fechada,
+leitura assincrona de stdout/stderr e acompanhamento por HasExited.
+Mantem verificacoes de componentes, prazo de 120 segundos, integridade
+e copia do banco. Erros do controle agora sao gravados no log.
+
+Evidencia no PC: Python, bibliotecas, PDF/OCR e check completo retornaram
+sucesso fora do instalador. A causa exata do bloqueio anterior ainda nao
+foi reproduzida. Esta correcao substitui o controle suspeito.
+
+Validacao aqui: parser PowerShell e execucao da nova funcao em Linux com
+sucesso, erro 7, timeout e caminho com espacos. Windows pendente.
