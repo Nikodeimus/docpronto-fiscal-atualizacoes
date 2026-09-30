@@ -18,7 +18,7 @@ class PDFEngineTests(unittest.TestCase):
         raw=f'''CHAVE DE ACESSO: {make_key()}
 EMITENTE
 RAZAO SOCIAL: Empresa Original Ltda
-CNPJ: 88.305.859/0004-00
+CNPJ: 11.222.333/0001-81
 DESTINATARIO / REMETENTE
 NOME / RAZAO SOCIAL: Cliente Real Ltda
 CNPJ/CPF: 28.988.409/0001-87
@@ -114,7 +114,7 @@ VALOR TOTAL DA NOTA: 1.234,56
             path=Path(temp)/'danfe.pdf'
             pdf=canvas.Canvas(str(path))
             lines=[f'CHAVE DE ACESSO: {make_key()}', 'EMITENTE',
-                   'RAZAO SOCIAL: Companhia de Teste Real', 'CNPJ: 88.305.859/0004-00',
+                   'RAZAO SOCIAL: Companhia de Teste Real', 'CNPJ: 11.222.333/0001-81',
                    'CALCULO DO IMPOSTO', 'VALOR DO ICMS: 0,00', 'VALOR TOTAL DA NOTA: 123,45']
             for i,line in enumerate(lines): pdf.drawString(25,800-i*20,line)
             pdf.save()

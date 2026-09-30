@@ -284,3 +284,6 @@ html[data-theme=dark] aside nav .nav-group-label{border-color:#415067;color:#a8b
 .compact aside nav button[data-page]{padding-block:8px}
 @media(max-width:760px){aside nav button[data-page]{flex:0 0 auto;white-space:nowrap}aside nav button[data-page]::after{display:none}}
 @media(prefers-reduced-motion:reduce){aside nav button[data-page]{transition:none}}
+
+.fiscal-status-cancelled { color: #bd1639; font-weight: 700; }
+[data-theme="dark"] .fiscal-status-cancelled { color: #ffaaaa; }

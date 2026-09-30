@@ -1,3 +1,5 @@
+DOCUMENTO HISTORICO — descreve uma revisao anterior. Nao use como instrucao de atualizacao atual. Consulte README.md e docs/REVISAO-PARECER-1.8.19.md.
+
 # DocPronto Fiscal — correções funcionais de 25/09/2026
 
 Fonte: `DocPronto-Local-1.8.19-Sem-Docker (3).zip`, indicado pelo usuário. Este pacote é o sistema fiscal, com empresas, certificados, captura SEFAZ, documentos e histórico. O conversor de documentos é outro projeto.

@@ -1,3 +1,5 @@
+DOCUMENTO HISTORICO — descreve uma revisao anterior. Nao use como instrucao de atualizacao atual. Consulte README.md e docs/REVISAO-PARECER-1.8.19.md.
+
 DOCPRONTO FISCAL 1.8.23 — VALIDAÇÃO DA REVISÃO, 26/09/2026
 
 No ambiente Windows de desenvolvimento, com banco temporário isolado:

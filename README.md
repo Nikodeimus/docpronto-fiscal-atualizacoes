@@ -59,3 +59,7 @@ Para desenvolvimento, use Python 3.12 em um ambiente virtual e instale `requirem
 O clone contém código-fonte, não um instalador completo: `runtime/`, `tools/`, executáveis e `local-manifest.json` do pacote não são versionados. OCR/PDF e testes que dependem desses componentes exigem suas ferramentas locais. Para instalar o programa pronto, use os arquivos das Releases. Ao montar uma distribuição, gere novamente o manifesto de hashes do pacote completo.
 
 Certificados, senhas, banco de dados e documentos de clientes ficam fora do Git. Os dados da instalação existente não são migrados para este repositório. Esta inclusão de código não publica uma nova versão no canal de atualização.
+
+## Revisão 1.8.33 — parecer técnico
+
+A comparação dos 15 apontamentos do parecer sobre a 1.8.19 com o código atual está em [docs/REVISAO-PARECER-1.8.19.md](docs/REVISAO-PARECER-1.8.19.md). Inclui proteção DPAPI do cofre Windows, situação fiscal de cancelamento, ICMS monofásico, ISSQN e participantes terceiros. Leia as limitações do cofre antes de migrar contas Windows. Essa revisão não constitui homologação de produção nem inicia consultas/manifestações fiscais por conta própria.

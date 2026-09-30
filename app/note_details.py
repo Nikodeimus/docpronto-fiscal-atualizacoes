@@ -45,6 +45,20 @@ def register_note_details(app,company,storage):
      status=protocol.findtext('n:cStat',namespaces=ns);number=protocol.findtext('n:nProt',namespaces=ns)
      item['protocol_status']=status;item['protocol']=number
      if status in ('100','150') and number:authorized=True
+    # Summaries preserve SEFAZ evidence too; absence of a full protocol must
+    # not hide a cancellation received after the original authorization.
+    if root.tag=='{'+ns['n']+'}resNFe' and root.findtext('n:chNFe',namespaces=ns)==key:
+     situation=root.findtext('n:cSitNFe',namespaces=ns)
+     item['summary_status']=situation
+     if situation=='3':cancelled=True
+     elif situation=='1':authorized=True
+    if root.tag=='{'+ns['n']+'}resEvento' and root.findtext('n:chNFe',namespaces=ns)==key:
+     kind=root.findtext('n:tpEvento',namespaces=ns) or ''
+     number=root.findtext('n:nProt',namespaces=ns) or ''
+     # resEvento has no cStat: its protocol denotes a registered event.
+     accepted=bool(number)
+     events.append({'id':row.id,'type':kind,'label':{'110111':'Cancelamento','110110':'Carta de correção'}.get(kind,'Evento '+kind),'status':'summary','accepted':accepted,'protocol':number,'registered_at':root.findtext('n:dhRegEvento',namespaces=ns) or '', 'message':'Resumo de evento preservado; assinatura não verificada.'})
+     if kind=='110111' and accepted:cancelled=True
     for ret in root.findall('.//n:retEvento/n:infEvento',ns):
      if ret.findtext('n:chNFe',namespaces=ns)!=key:continue
      kind=ret.findtext('n:tpEvento',namespaces=ns) or ''
@@ -59,7 +73,7 @@ def register_note_details(app,company,storage):
   availability='pending_xml'
   if chosen and chosen.kind=='nfeProc':
    availability='complete' if next((v['available'] for v in versions if v['id']==chosen.id),False) else 'unavailable'
-  return jsonify(key=key,data=json.loads(chosen.data) if chosen else {},availability=availability,fiscal_status='cancelled_in_file' if cancelled else 'authorized_in_file' if authorized else 'unknown',versions=versions,events=events,signature_validation='not_verified',message='Situação baseada somente nos protocolos dos arquivos preservados. Assinaturas não verificadas; não houve consulta atual à SEFAZ.')
+  return jsonify(key=key,data=json.loads(chosen.data) if chosen else {},availability=availability,fiscal_status='cancelled_in_file' if cancelled else 'authorized_in_file' if authorized else 'unknown',versions=versions,events=events,signature_validation='not_verified',message='Situação baseada nos protocolos e resumos dos arquivos preservados. Assinaturas não verificadas; não houve consulta atual à SEFAZ.')
  @app.post('/api/history/compare')
  def compare():
   body=request.get_json(silent=True)

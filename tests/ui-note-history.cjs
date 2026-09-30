@@ -4,8 +4,10 @@ assert(source.includes('function renderNoteHistory('),'grouped note view must ex
 const nodes={},ctx={historyPage:1,historyMonth:'2026-09',historyMonthTo:'',historyPending:false,historyView:'notes',cid:'one',page:'history',
  $:id=>nodes[id]??={innerHTML:'',value:'',open:false},esc:String,date:String,heading:()=>'',mountMonthlyCoverage(){},action:f=>f(),renderHistory(){},toast(){},encodeURIComponent};
 vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function renderNoteHistory(')),ctx);
-ctx.renderNoteHistory({total:2,complete_xml:1,pending_xml:1,items:[{id:'full',key:'1'.repeat(44),kind:'nfeProc',data:{issued_at:'2026-09-01'},created:1},{id:'summary',key:'2'.repeat(44),kind:'resNFe',data:{issued_at:'2026-09-02'},created:2}]},{items:[]},'one','',()=>true);
+ctx.renderNoteHistory({total:2,complete_xml:1,pending_xml:1,items:[{id:'full',fiscal_status:'cancelled_in_file',key:'1'.repeat(44),kind:'nfeProc',data:{issued_at:'2026-09-01'},created:1},{id:'summary',key:'2'.repeat(44),kind:'resNFe',data:{issued_at:'2026-09-02'},created:2}]},{items:[]},'one','',()=>true);
 assert(nodes['#main'].innerHTML.includes('XML completo'));
+assert(nodes['#main'].innerHTML.includes('Cancelamento registrado — não tratar como nota ativa'));
+assert(nodes['#main'].innerHTML.includes('Situação fiscal não confirmada'));
 assert(nodes['#main'].innerHTML.includes('Aguardando XML'));
 assert(nodes['#main'].innerHTML.includes('Baixar resumo'));
 assert(!nodes['#main'].innerHTML.includes('history-delete-selected'),'note view must not expose ambiguous file deletion');

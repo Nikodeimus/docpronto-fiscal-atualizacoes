@@ -1,10 +1,9 @@
 """Per-registration capture settings and encrypted A1 storage."""
-import base64,json,os,time
+import base64,json,time
 from pathlib import Path
 from flask import g,request,jsonify
 from sqlalchemy import select,String,Text,ForeignKey
 from sqlalchemy.orm import Mapped,mapped_column
-from cryptography.fernet import Fernet
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs12
 from .db import Base,Setting,Company,ClientRegistration,Client,ServiceProvider,log
@@ -18,16 +17,8 @@ class StoredA1(Base):
     metadata_json:Mapped[str]=mapped_column(Text)
 
 def cipher(storage):
-    path=storage.root/'certificate-vault.key'
-    if not path.exists():
-        import tempfile
-        fd,temp=tempfile.mkstemp(dir=storage.root,prefix='vault-key-')
-        try:
-            with os.fdopen(fd,'wb') as f:f.write(Fernet.generate_key());f.flush();os.fsync(f.fileno())
-            try:os.link(temp,path)
-            except FileExistsError:pass
-        finally:os.unlink(temp)
-    return Fernet(path.read_bytes())
+    from .certificate_vault import vault_cipher
+    return vault_cipher(storage.root)
 
 def certificate_document(cert):
     try:san=cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value

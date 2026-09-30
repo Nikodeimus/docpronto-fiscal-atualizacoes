@@ -36,7 +36,9 @@ def register_fiscal_sources(app,company,storage):
     if kind not in ('nfeProc','resNFe','procEventoNFe','resEvento'):raise ValueError('Importe NF-e processada, resumo ou evento NF-e. Este tipo não está integrado.')
     if kind=='nfeProc':
      parties=[root.findtext('.//n:'+part+'/n:'+field,namespaces=ns) for part in ('emit','dest') for field in ('CNPJ','CPF')]
-     if co.document not in parties:raise ValueError('O CNPJ/CPF selecionado não participa desta nota.')
+     from .fiscal import third_party_roles
+     inf=root.find('n:NFe/n:infNFe',ns)
+     if co.document not in parties and not (inf is not None and third_party_roles(inf,co.document)):raise ValueError('O CNPJ/CPF selecionado não participa desta nota.')
      if root.findtext('.//n:ide/n:mod',namespaces=ns)!='55':raise ValueError('Este importador é de NF-e modelo 55.')
     else:
      key=root.findtext('.//n:chNFe',namespaces=ns) or ''

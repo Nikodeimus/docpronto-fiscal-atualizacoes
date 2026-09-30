@@ -44,6 +44,33 @@ def archive_xml(session,storage,cid,raw,taxid):
     row=FiscalArchive(id=uid(),company_id=cid,key=key,kind=kind,sha256=digest,data=json.dumps(data),warning=warning,path='')
     row.path=storage.save(cid,'history-'+row.id,raw,'xml');session.add(row);session.flush();return row
 
+def fiscal_statuses(session,storage,cid,keys):
+    """Read verified local evidence across all dates, scoped to this company."""
+    from .distribution import xml_root
+    states={key:'unknown' for key in keys}
+    if not states:return states
+    ns={'n':'http://www.portalfiscal.inf.br/nfe'}
+    query=select(FiscalArchive).where(FiscalArchive.company_id==cid,FiscalArchive.key.in_(states))
+    for row in session.scalars(query):
+        try:
+            path=storage.resolve(row.path)
+            if path.stat().st_size>8*1024*1024:continue
+            raw=path.read_bytes()
+            if hashlib.sha256(raw).hexdigest()!=row.sha256:continue
+            root=xml_root(raw);state='unknown'
+            if root.tag=='{'+ns['n']+'}resNFe' and root.findtext('n:chNFe',namespaces=ns)==row.key:
+                state={'1':'authorized_in_file','3':'cancelled_in_file'}.get(root.findtext('n:cSitNFe',namespaces=ns),'unknown')
+            if root.tag=='{'+ns['n']+'}resEvento' and root.findtext('n:chNFe',namespaces=ns)==row.key:
+                if root.findtext('n:tpEvento',namespaces=ns)=='110111' and root.findtext('n:nProt',namespaces=ns):state='cancelled_in_file'
+            for ret in root.findall('.//n:retEvento/n:infEvento',ns):
+                if ret.findtext('n:chNFe',namespaces=ns)==row.key and ret.findtext('n:tpEvento',namespaces=ns)=='110111' and ret.findtext('n:cStat',namespaces=ns)=='135' and ret.findtext('n:nProt',namespaces=ns):state='cancelled_in_file'
+            prot=root.find('n:protNFe/n:infProt',ns)
+            if state=='unknown' and prot is not None and prot.findtext('n:chNFe',namespaces=ns)==row.key and prot.findtext('n:cStat',namespaces=ns) in ('100','150') and prot.findtext('n:nProt',namespaces=ns):state='authorized_in_file'
+            if state=='cancelled_in_file' or states[row.key]=='unknown':states[row.key]=state
+        except (OSError,ValueError,etree.XMLSyntaxError):continue
+    return states
+
+
 def canonical_note_ids(company_ids):
     # Full XML wins even when a later summary/event arrives. Group before
     # applying dates so the same note cannot appear in two emission months.
@@ -109,8 +136,9 @@ def register_history(app,company,storage,limited):
             if request.args.get('pending')=='1':q=q.where(FiscalArchive.kind=='resNFe')
         page=max(1,int(request.args.get('page','1')))
         total=g.s.scalar(select(func.count()).select_from(q.subquery()))
-        rows=g.s.scalars(q.order_by(FiscalArchive.created.desc(),FiscalArchive.id.desc()).offset((page-1)*50).limit(50))
-        return jsonify(total=total,page=page,**meta,items=[{'id':r.id,'key':r.key,'kind':r.kind,'data':json.loads(r.data),'warning':r.warning,'created':r.created,'status':'complete' if r.kind=='nfeProc' else 'pending_xml' if r.kind=='resNFe' else 'event'} for r in rows])
+        rows=list(g.s.scalars(q.order_by(FiscalArchive.created.desc(),FiscalArchive.id.desc()).offset((page-1)*50).limit(50)))
+        states=fiscal_statuses(g.s,storage,cid,{r.key for r in rows})
+        return jsonify(total=total,page=page,**meta,items=[{'id':r.id,'key':r.key,'kind':r.kind,'data':json.loads(r.data),'warning':r.warning,'created':r.created,'fiscal_status':states.get(r.key,'unknown'),'status':'complete' if r.kind=='nfeProc' else 'pending_xml' if r.kind=='resNFe' else 'event'} for r in rows])
     @app.get('/api/history/coverage')
     def monthly_coverage():
         from datetime import datetime,timezone
@@ -171,6 +199,7 @@ def register_history(app,company,storage,limited):
             with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as z, tempfile.SpooledTemporaryFile(max_size=1024*1024) as manifest:
                 manifest.write(b'{"coverage":"not_confirmed","signature_validation":"not_verified","files":[')
                 first=True
+                status_cache={}
                 for row in g.s.scalars(query.execution_options(yield_per=100)):
                     name=(row.key or row.id)+'-'+row.id+'.xml'
                     if organized:
@@ -193,6 +222,8 @@ def register_history(app,company,storage,limited):
                         try:provenance=json.loads(origin.value) if origin else {'source':'not_recorded'}
                         except ValueError:provenance={'source':'not_recorded'}
                         entry={'path':name,'integrity':'verified','key':row.key,'kind':row.kind,'sha256':row.sha256,'received_at':row.created,'origin':provenance,'availability':'complete' if row.kind=='nfeProc' else 'summary' if row.kind=='resNFe' else 'event'}
+                        if row.key not in status_cache:status_cache.update(fiscal_statuses(g.s,storage,cid,[row.key]))
+                        entry['fiscal_status']=status_cache.get(row.key,'unknown')
                         if not first:manifest.write(b',')
                         first=False;manifest.write(json.dumps(entry,ensure_ascii=False).encode('utf-8'))
                 if organized:

@@ -16,11 +16,12 @@ from .storage import LocalStorageProvider
 from .providers import extract_pdf,validate_pdf,ProviderPending,ProviderFailure
 from .certificates import inspect_a1
 from .document_management import register_management,verify_deletion_password
-from .fiscal_history import register_history
+from .fiscal_history import register_history, fiscal_statuses
 from .client_capture import register_client_capture
 from .fiscal_channels import register_fiscal_channels
 from .nfce import register_nfce
 from .manifest_automation import ScienceCandidate
+from .version import VERSION, REVISION
 
 def create_app(database_url=None,data_dir=None,testing=False):
     app=Flask(__name__,static_folder='static',static_url_path='/static')
@@ -86,7 +87,11 @@ def create_app(database_url=None,data_dir=None,testing=False):
         d=g.s.get(Document,did)
         if not d:raise FiscalError('Documento não encontrado.')
         company(d.company_id,write);return d
-    def view(d):return {'id':d.id,'key':d.key,'status':d.status,'source':d.source,'data':json.loads(d.data),'error':d.error,'has_pdf':bool(d.pdf),'has_xml':bool(d.xml),'has_draft':bool(d.draft),'created':d.created,'updated':d.updated}
+    def view(d):
+        states=getattr(g,'document_fiscal_states',None)
+        if states is None:
+            states=fiscal_statuses(g.s,storage,d.company_id,[d.key])
+        return {'id':d.id,'key':d.key,'status':d.status,'fiscal_status':states.get(d.key,'unknown'),'source':d.source,'data':json.loads(d.data),'error':d.error,'has_pdf':bool(d.pdf),'has_xml':bool(d.xml),'has_draft':bool(d.draft),'created':d.created,'updated':d.updated}
     def audit(action,cid=None,details='',doc=None):log(g.s,cid,g.user.id,action,details,doc)
     def limited(key,limit=15):
         now=time.time();bucket=f'{key}:{int(now//300)}'
@@ -101,7 +106,7 @@ def create_app(database_url=None,data_dir=None,testing=False):
     def index():return app.send_static_file('index.html')
     @app.get('/api/status')
     def status():
-        result=dict(needs_setup=g.s.scalar(select(func.count()).select_from(User))==0,version='1.8.23',revision='fiscal-central-20260926',mode='self-hosted',allow_signup=app.config['ALLOW_SIGNUP'])
+        result=dict(needs_setup=g.s.scalar(select(func.count()).select_from(User))==0,version=VERSION,revision=REVISION,mode='self-hosted',allow_signup=app.config['ALLOW_SIGNUP'])
         if os.getenv('DOCPRONTO_LOCAL_INSTANCE'):
             result.update(mode='windows-local',local_instance=os.environ['DOCPRONTO_LOCAL_INSTANCE'])
         return jsonify(result)
@@ -357,6 +362,7 @@ def create_app(database_url=None,data_dir=None,testing=False):
         if request.args.get('status'):query=query.where(Document.status==request.args['status'])
         total=g.s.scalar(select(func.count()).select_from(query.subquery()))
         docs=g.s.scalars(query.order_by(Document.created.desc(),Document.id).offset((page-1)*size).limit(size)).all()
+        g.document_fiscal_states=fiscal_statuses(g.s,storage,cid,{d.key for d in docs})
         return jsonify(items=[view(d) for d in docs],page=page,total=total,pages=max(1,(total+size-1)//size))
     @app.post('/api/keys')
     def add_keys():

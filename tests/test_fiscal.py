@@ -97,3 +97,115 @@ def test_icms61_preserves_monophase_fields():
 def test_icms61_rejects_invalid_values(field,value):
     r=E.fromstring(mono61_xml());r.find('.//n:ICMS61/n:'+field,N).text=value
     with pytest.raises(FiscalError):parse_xml(E.tostring(r),DEST)
+
+
+def mono_xml(kind):
+    r=E.fromstring(mono61_xml());node=r.find('.//n:ICMS61',N);node.tag='{'+NS+'}'+kind
+    node.clear()
+    fields={'orig':'0','CST':kind[-2:],'qBCMono':'10.0000','adRemICMS':'1.00','vICMSMono':'10.00'}
+    if kind=='ICMS15':fields.update(qBCMonoReten='5.0000',adRemICMSReten='1.00',vICMSMonoReten='5.00')
+    if kind=='ICMS53':fields.update(vICMSMonoOp='20.00',pDif='50.0000',vICMSMonoDif='10.00')
+    for k,v in fields.items():E.SubElement(node,'{'+NS+'}'+k).text=v
+    total=r.find('.//n:ICMSTot',N)
+    for k in ('qBCMono','vICMSMono','qBCMonoReten','vICMSMonoReten'):
+        if k in fields:E.SubElement(total,'{'+NS+'}'+k).text=fields[k]
+    if kind=='ICMS15':total.find('n:vNF',N).text='138005.00'
+    return E.tostring(r)
+
+@pytest.mark.parametrize('kind',['ICMS02','ICMS15','ICMS53'])
+def test_monophase_families_preserve_taxes_and_totals(kind):
+    raw=mono_xml(kind);d=parse_xml(raw,DEST)
+    assert d['items'][0]['icms']['CST']==kind[-2:]
+    assert d['items'][0]['icms']['vICMSMono']=='10.00'
+    assert d['totals']['vICMS']=='0.00'
+    assert d['sha256']==hashlib.sha256(raw).hexdigest()
+
+@pytest.mark.parametrize('kind',['ICMS02','ICMS15','ICMS53'])
+def test_monophase_rejects_negative_ad_rem_and_wrong_cst(kind):
+    r=E.fromstring(mono_xml(kind));r.find('.//n:'+kind+'/n:adRemICMS',N).text='-1'
+    with pytest.raises(FiscalError):parse_xml(E.tostring(r))
+    r=E.fromstring(mono_xml(kind));r.find('.//n:'+kind+'/n:CST',N).text='00'
+    with pytest.raises(FiscalError):parse_xml(E.tostring(r))
+
+def test_monophase_retention_is_in_invoice_total_and_reconciled():
+    r=E.fromstring(mono_xml('ICMS15'));r.find('.//n:ICMSTot/n:vNF',N).text='138000.00'
+    with pytest.raises(FiscalError,match='vNF'):parse_xml(E.tostring(r))
+    r=E.fromstring(mono_xml('ICMS15'));r.find('.//n:ICMSTot/n:vICMSMonoReten',N).text='8.00'
+    with pytest.raises(FiscalError,match='vICMSMonoReten'):parse_xml(E.tostring(r))
+
+
+THIRD='28988409000187'
+
+def service_xml(mixed=False):
+    r=E.fromstring(RAW);inf=r.find('n:NFe/n:infNFe',N)
+    item=inf.find('n:det',N)
+    if mixed:
+        item=deepcopy(item);item.set('nItem','2');inf.append(item)
+    tax=item.find('n:imposto',N)
+    for child in list(tax):tax.remove(child)
+    iss=E.SubElement(tax,'{'+NS+'}ISSQN')
+    for k,v in {'vBC':'100.00','vAliq':'5.00','vISSQN':'5.00','cMunFG':'3550308','cListServ':'01.01','indISS':'1','indIncentivo':'2'}.items():E.SubElement(iss,'{'+NS+'}'+k).text=v
+    for family,rate,value in [('PIS','1.65','1.65'),('COFINS','7.60','7.60')]:
+        group=E.SubElement(tax,'{'+NS+'}'+family);aliq=E.SubElement(group,'{'+NS+'}'+family+'Aliq')
+        for k,v in {'CST':'01','vBC':'100.00','p'+family:rate,'v'+family:value}.items():E.SubElement(aliq,'{'+NS+'}'+k).text=v
+    prod=item.find('n:prod',N)
+    for k,v in {'qCom':'1','vUnCom':'100.00','vProd':'100.00','NCM':'00','CFOP':'5933'}.items():prod.find('n:'+k,N).text=v
+    total=inf.find('n:total/n:ICMSTot',N)
+    total.find('n:vNF',N).text='138100.00' if mixed else '100.00'
+    if not mixed:
+        for k in ('vProd','vBC','vICMS'):total.find('n:'+k,N).text='0.00'
+    service=E.SubElement(inf.find('n:total',N),'{'+NS+'}ISSQNtot')
+    for k,v in {'vServ':'100.00','vBC':'100.00','vISS':'5.00','vPIS':'1.65','vCOFINS':'7.60','dCompet':'2025-12-01'}.items():E.SubElement(service,'{'+NS+'}'+k).text=v
+    return E.tostring(r)
+
+@pytest.mark.parametrize('mixed',[False,True])
+def test_issqn_services_and_goods_have_separate_totals(mixed):
+    raw=service_xml(mixed);data=parse_xml(raw,DEST)
+    assert data['service_totals']['vServ']=='100.00'
+    assert data['service_totals']['vPIS']=='1.65'
+    assert data['totals']['vPIS']=='0.00'
+    assert data['items'][-1]['issqn']['vISSQN']=='5.00'
+    assert data['items'][-1]['icms']=={}
+    assert data['sha256']==hashlib.sha256(raw).hexdigest()
+
+@pytest.mark.parametrize('path,value',[
+ ('.//n:ISSQN/n:vBC','-1'),('.//n:ISSQN/n:vAliq','101'),
+ ('.//n:ISSQN/n:indISS','9'),('.//n:ISSQNtot/n:vServ','101'),
+ ('.//n:ISSQNtot/n:vPIS','0'),('.//n:ICMSTot/n:vNF','138000'),
+ ('.//n:ISSQNtot/n:dCompet','2025-02-30')])
+def test_issqn_invalid_totals_and_fields_rejected(path,value):
+    r=E.fromstring(service_xml(True));r.find(path,N).text=value
+    with pytest.raises(FiscalError):parse_xml(E.tostring(r))
+
+def test_issqn_cannot_share_item_with_icms_or_omit_required_tax():
+    r=E.fromstring(service_xml());tax=r.find('.//n:det/n:imposto',N)
+    tax.append(deepcopy(E.fromstring(RAW).find('.//n:ICMS',N)))
+    with pytest.raises(FiscalError,match='apenas ICMS ou ISSQN'):parse_xml(E.tostring(r))
+    r=E.fromstring(service_xml());iss=r.find('.//n:ISSQN',N);iss.remove(iss.find('n:vISSQN',N))
+    with pytest.raises(FiscalError,match='obrigatório'):parse_xml(E.tostring(r))
+
+@pytest.mark.parametrize('role',['transportadora','autorizado_xml'])
+def test_third_party_identity_is_not_purchase_or_sale(role):
+    r=E.fromstring(RAW);inf=r.find('n:NFe/n:infNFe',N)
+    if role=='transportadora':
+        transp=inf.find('n:transp',N)
+        if transp is None:transp=E.SubElement(inf,'{'+NS+'}transp')
+        old=transp.find('n:transporta',N)
+        if old is not None:transp.remove(old)
+        node=E.SubElement(transp,'{'+NS+'}transporta')
+    else:node=E.SubElement(inf,'{'+NS+'}autXML')
+    E.SubElement(node,'{'+NS+'}CNPJ').text=THIRD
+    raw=E.tostring(r);data=parse_xml(raw,THIRD)
+    assert data['flow']=='terceiro' and data['participation']==[role]
+    for operation in ('entrada','saida'):
+        with pytest.raises(FiscalError,match='Operação'):parse_xml(raw,THIRD,operation)
+    node.find('n:CNPJ',N).text=DEST
+    with pytest.raises(FiscalError,match='não participa'):parse_xml(E.tostring(r),THIRD)
+
+def test_third_party_identity_cannot_come_from_arbitrary_or_duplicate_groups():
+    r=E.fromstring(RAW);inf=r.find('n:NFe/n:infNFe',N)
+    extra=E.SubElement(inf,'{'+NS+'}infAdic');E.SubElement(extra,'{'+NS+'}CNPJ').text=THIRD
+    with pytest.raises(FiscalError,match='não participa'):parse_xml(E.tostring(r),THIRD)
+    auth=E.SubElement(inf,'{'+NS+'}autXML')
+    E.SubElement(auth,'{'+NS+'}CNPJ').text=THIRD;E.SubElement(auth,'{'+NS+'}CPF').text='123'
+    with pytest.raises(FiscalError,match='não participa'):parse_xml(E.tostring(r),THIRD)

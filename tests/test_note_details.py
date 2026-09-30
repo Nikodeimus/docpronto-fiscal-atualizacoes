@@ -54,3 +54,41 @@ def test_comparison_rejects_other_company_and_large_input(env):
  assert c.post('/api/history/compare',json={'company':'other','keys':KEY},headers=h).status_code==400
  assert c.post('/api/history/compare',json={'company':cid,'keys':[KEY]*10001},headers=h).status_code==400
  assert c.post('/api/history/compare',json={'company':cid,'keys':KEY,'month_from':'2026-13'},headers=h).status_code==400
+
+
+def test_cancelled_summary_overrides_full_authorized_xml(env):
+ app,c,h,cid=env
+ with app.session_factory.begin() as s:
+  archive_xml(s,app.storage,cid,RAW,'11444777000161')
+  archive_xml(s,app.storage,cid,('<resNFe xmlns="http://www.portalfiscal.inf.br/nfe"><chNFe>'+KEY+'</chNFe><cSitNFe>3</cSitNFe></resNFe>').encode(),'11444777000161')
+ d=c.get('/api/history/notes/'+KEY+'?company='+cid).json
+ assert d['fiscal_status']=='cancelled_in_file' and d['availability']=='complete'
+ assert d['signature_validation']=='not_verified'
+
+
+def test_cancel_event_summary_requires_protocol_and_integrity(env):
+ app,c,h,cid=env
+ raw=('<resEvento xmlns="http://www.portalfiscal.inf.br/nfe"><chNFe>'+KEY+'</chNFe><tpEvento>110111</tpEvento>{}</resEvento>')
+ with app.session_factory.begin() as s:archive_xml(s,app.storage,cid,raw.format('').encode(),'11444777000161')
+ assert c.get('/api/history/notes/'+KEY+'?company='+cid).json['fiscal_status']=='unknown'
+ with app.session_factory.begin() as s:
+  row=archive_xml(s,app.storage,cid,raw.format('<nProt>123456</nProt>').encode(),'11444777000161');path=row.path
+ assert c.get('/api/history/notes/'+KEY+'?company='+cid).json['fiscal_status']=='cancelled_in_file'
+ app.storage.resolve(path).write_bytes(b'changed')
+ assert c.get('/api/history/notes/'+KEY+'?company='+cid).json['fiscal_status']=='unknown'
+
+
+def test_history_and_zip_report_cancellation_outside_emission_period(env):
+ import io,zipfile
+ app,c,h,cid=env
+ with app.session_factory.begin() as s:
+  archive_xml(s,app.storage,cid,RAW,'11444777000161')
+  archive_xml(s,app.storage,cid,('<resNFe xmlns="http://www.portalfiscal.inf.br/nfe"><chNFe>'+KEY+'</chNFe><dhEmi>2026-02-01T00:00:00-03:00</dhEmi><cSitNFe>3</cSitNFe></resNFe>').encode(),'11444777000161')
+ result=c.get('/api/history?company='+cid+'&view=notes&month=2025-12').json
+ assert result['total']==1 and result['items'][0]['fiscal_status']=='cancelled_in_file'
+ response=c.get('/api/history/export?company='+cid+'&organized=1&month=2025-12')
+ assert response.status_code==200
+ with zipfile.ZipFile(io.BytesIO(response.data)) as z:
+  manifest=json.loads(z.read('manifesto.json'))
+  assert manifest['files'][0]['fiscal_status']=='cancelled_in_file'
+  assert z.read(manifest['files'][0]['path'])==RAW

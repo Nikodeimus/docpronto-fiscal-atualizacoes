@@ -79,6 +79,18 @@ def validate_taxes(tax,num):
         amounts['v'+family]=values.get('v'+family,'0')
     return amounts
 
+def third_party_roles(inf, company):
+    """Only identities in the schema's explicit carrier/authorized-party paths."""
+    roles=[]
+    if not validate_tax_id(company):return roles
+    for path,role in [('n:transp/n:transporta','transportadora'),('n:autXML','autorizado_xml')]:
+        for node in inf.findall(path,N):
+            identities=node.findall('n:CNPJ',N)+node.findall('n:CPF',N)
+            if len(identities)==1 and (identities[0].text or '').strip()==company:
+                roles.append(role)
+    return sorted(set(roles))
+
+
 def parse_xml(raw, company=None, operation='auto'):
     if len(raw)>8*1024*1024:raise FiscalError('XML excede 8 MB.')
     try:
@@ -112,12 +124,13 @@ def parse_xml(raw, company=None, operation='auto'):
         if a!=b:raise FiscalError('Chave diverge do campo '+label+'. Não substituir os dados da nota.')
     if values['tpNF'] not in ('0','1'):raise FiscalError('tpNF inválido.')
     if operation not in ('auto','entrada','saida'):raise FiscalError('Operação inválida.')
-    flow=None
+    flow=None;participation=[]
     if company:
         company=digits(company)
         if company==issuer:flow='saida' if values['tpNF']=='1' else 'entrada'
         elif company==recipient:flow='entrada' if values['tpNF']=='1' else 'saida'
-        else:raise FiscalError('CNPJ/CPF da empresa não participa como emitente ou destinatário. Não alterar o XML para forçar importação.')
+        elif third_party_roles(inf,company):flow='terceiro';participation=third_party_roles(inf,company)
+        else:raise FiscalError('CNPJ/CPF da empresa não participa como emitente, destinatário, transportadora ou autorizado XML. Não alterar o XML para forçar importação.')
         if operation!='auto' and operation!=flow:raise FiscalError('Operação incorreta para a empresa: esperado '+flow+'.')
     total=inf.find('n:total/n:ICMSTot',N)
     if total is None:raise FiscalError('Grupo total/ICMSTot ausente.')
@@ -139,39 +152,71 @@ def parse_xml(raw, company=None, operation='auto'):
             if k not in p or p[k]=='':raise FiscalError('Item '+num+': campo ausente '+k)
         for k in ['qCom','vUnCom','vProd']:dec(p[k])
         if abs(dec(p['qCom'])*dec(p['vUnCom'])-dec(p['vProd']))>Decimal('0.02'):raise FiscalError('Valor do produto diverge de quantidade × valor unitário no item '+num)
-        icms=tax.find('n:ICMS',N)
-        if icms is None or len(icms)!=1:raise FiscalError('Item '+num+': modalidade ICMS ausente ou duplicada.')
-        kind=E.QName(icms[0]).localname
-        supported={'ICMS00','ICMS10','ICMS20','ICMS30','ICMS40','ICMS51','ICMS60','ICMS61','ICMS70','ICMS90','ICMSPart','ICMSST','ICMSSN101','ICMSSN102','ICMSSN201','ICMSSN202','ICMSSN500','ICMSSN900'}
-        if kind not in supported:raise FiscalError('Modalidade ICMS requer parser específico: '+kind)
-        icms_data=flatten(icms[0])
-        cst_map={'ICMS00':['00'],'ICMS10':['10'],'ICMS20':['20'],'ICMS30':['30'],'ICMS40':['40','41','50'],'ICMS51':['51'],'ICMS60':['60'],'ICMS61':['61'],'ICMS70':['70'],'ICMS90':['90'],'ICMSPart':['10','90'],'ICMSST':['41','60'],'ICMSSN101':['101'],'ICMSSN102':['102','103','300','400'],'ICMSSN201':['201'],'ICMSSN202':['202','203'],'ICMSSN500':['500'],'ICMSSN900':['900']}
-        if icms_data.get('CSOSN' if kind.startswith('ICMSSN') else 'CST') not in cst_map[kind]:raise FiscalError('CST/CSOSN incompatível com a modalidade ICMS.')
-        if kind=='ICMS61':
-            for field in ('qBCMonoRet','adRemICMSRet','vICMSMonoRet'):
+        issqn_nodes=tax.findall('n:ISSQN',N)
+        issqn={}
+        if issqn_nodes:
+            if len(issqn_nodes)!=1 or tax.find('n:ICMS',N) is not None:raise FiscalError('Item '+num+': escolha apenas ICMS ou ISSQN, sem duplicação.')
+            issqn=flatten(issqn_nodes[0]);icms_data={}
+            for field in ('vBC','vAliq','vISSQN','cMunFG','cListServ','indISS','indIncentivo'):
+                if not issqn.get(field):raise FiscalError('Campo ISSQN obrigatório ausente: '+field)
+            if dec(issqn['vAliq'])>100:raise FiscalError('Alíquota ISSQN acima de 100.')
+            if issqn['indISS'] not in ('1','2','3','4','5','6','7') or issqn['indIncentivo'] not in ('1','2'):raise FiscalError('Indicador ISSQN inválido.')
+            if not re.fullmatch(r'[0-9]{7}',issqn['cMunFG']) or not re.fullmatch(r'[0-9]{2}\.[0-9]{2}',issqn['cListServ']):raise FiscalError('Município ou lista de serviço ISSQN inválido.')
+        else:
+            icms=tax.find('n:ICMS',N)
+            if icms is None or len(icms)!=1:raise FiscalError('Item '+num+': modalidade ICMS ausente ou duplicada.')
+            kind=E.QName(icms[0]).localname
+            supported={'ICMS02','ICMS15','ICMS53','ICMS00','ICMS10','ICMS20','ICMS30','ICMS40','ICMS51','ICMS60','ICMS61','ICMS70','ICMS90','ICMSPart','ICMSST','ICMSSN101','ICMSSN102','ICMSSN201','ICMSSN202','ICMSSN500','ICMSSN900'}
+            if kind not in supported:raise FiscalError('Modalidade ICMS requer parser específico: '+kind)
+            icms_data=flatten(icms[0])
+            cst_map={'ICMS02':['02'],'ICMS15':['15'],'ICMS53':['53'],'ICMS00':['00'],'ICMS10':['10'],'ICMS20':['20'],'ICMS30':['30'],'ICMS40':['40','41','50'],'ICMS51':['51'],'ICMS60':['60'],'ICMS61':['61'],'ICMS70':['70'],'ICMS90':['90'],'ICMSPart':['10','90'],'ICMSST':['41','60'],'ICMSSN101':['101'],'ICMSSN102':['102','103','300','400'],'ICMSSN201':['201'],'ICMSSN202':['202','203'],'ICMSSN500':['500'],'ICMSSN900':['900']}
+            if icms_data.get('CSOSN' if kind.startswith('ICMSSN') else 'CST') not in cst_map[kind]:raise FiscalError('CST/CSOSN incompatível com a modalidade ICMS.')
+            if kind in {'ICMS02','ICMS15','ICMS53','ICMS61'}:
+                required={'ICMS02':('adRemICMS','vICMSMono'),'ICMS15':('adRemICMS','vICMSMono','adRemICMSReten','vICMSMonoReten')}.get(kind,())
+                for field in required:
+                    if field not in icms_data:raise FiscalError('Campo ICMS monofásico obrigatório ausente: '+field)
+                for field,value in icms_data.items():
+                    if field.startswith(('qBCMono','adRemICMS','vICMSMono')) or field in ('pDif','pRedAdRem'):
+                        amount=dec(value)
+                        if field in ('pDif','pRedAdRem') and amount>100:raise FiscalError('Percentual monofásico acima de 100: '+field)
+            if not ('CST' in icms_data or 'CSOSN' in icms_data):raise FiscalError('CST/CSOSN ausente no item '+num)
+            if kind in {'ICMS00','ICMS10','ICMS20','ICMS70','ICMSPart'}:
+                for field in ['vBC','pICMS','vICMS']:
+                    if field not in icms_data:raise FiscalError('Campo ICMS obrigatório ausente: '+field)
+            for field in ['vBC','vICMS','vICMSDeson','vST','vFCPST','pRedBC','pICMS']:
                 if field in icms_data:dec(icms_data[field])
+            if kind in {'ICMS20','ICMS70'} and 'pRedBC' not in icms_data:raise FiscalError('Percentual de redução ausente no item '+num)
         contributions=validate_taxes(tax,num)
-        if not ('CST' in icms_data or 'CSOSN' in icms_data):raise FiscalError('CST/CSOSN ausente no item '+num)
-        if kind in {'ICMS00','ICMS10','ICMS20','ICMS70','ICMSPart'}:
-            for field in ['vBC','pICMS','vICMS']:
-                if field not in icms_data:raise FiscalError('Campo ICMS obrigatório ausente: '+field)
-        for field in ['vBC','vICMS','vICMSDeson','vST','vFCPST','pRedBC','pICMS']:
-            if field in icms_data:dec(icms_data[field])
-        if kind in {'ICMS20','ICMS70'} and 'pRedBC' not in icms_data:raise FiscalError('Percentual de redução ausente no item '+num)
-        items.append({'number':num,'product':p,'taxes':flatten(tax),'icms':icms_data,'additional':txt(det,'n:infAdProd'),'contributions':contributions})
-    product_sum=sum((dec(i['product']['vProd']) for i in items if i['product'].get('indTot','1')=='1'),Decimal(0))
+        items.append({'number':num,'product':p,'taxes':flatten(tax),'icms':icms_data,'issqn':issqn,'additional':txt(det,'n:infAdProd'),'contributions':contributions})
+    product_sum=sum((dec(i['product']['vProd']) for i in items if not i['issqn'] and i['product'].get('indTot','1')=='1'),Decimal(0))
     if abs(product_sum-dec(totals['vProd']))>Decimal('0.02'):raise FiscalError('Soma dos produtos diverge de vProd total.')
     for field in ['vBC','vICMS']:
         available=[i['icms'].get(field,'0') for i in items]
         if abs(sum((dec(v) for v in available),Decimal(0))-dec(totals[field]))>Decimal('0.02'):raise FiscalError('Soma dos itens diverge de '+field+' total.')
+    for field in ('qBCMono','vICMSMono','qBCMonoReten','vICMSMonoReten','qBCMonoRet','vICMSMonoRet'):
+        if field in totals and abs(sum((dec(i['icms'].get(field,'0')) for i in items),Decimal(0))-dec(totals[field]))>Decimal('0.02'):
+            raise FiscalError('Soma dos itens diverge de '+field+' total.')
     for family in ['PIS','COFINS']:
         field='v'+family
         if field not in totals:raise FiscalError('Total obrigatório ausente: '+field)
-        if abs(sum((dec(i['contributions'][field]) for i in items),Decimal(0))-dec(totals[field]))>Decimal('0.02'):raise FiscalError('Soma dos itens diverge de '+field+' total.')
+        if abs(sum((dec(i['contributions'][field]) for i in items if not i['issqn']),Decimal(0))-dec(totals[field]))>Decimal('0.02'):raise FiscalError('Soma dos itens diverge de '+field+' total.')
+    service_items=[i for i in items if i['issqn']]
+    service_totals=flatten(inf.find('n:total/n:ISSQNtot',N))
+    if service_items and not service_totals:raise FiscalError('Grupo ISSQNtot ausente para itens de serviço.')
+    if service_totals:
+        try:datetime.strptime(service_totals.get('dCompet',''),'%Y-%m-%d')
+        except ValueError:raise FiscalError('Data de competência ISSQN inválida.') from None
+        for field,value in service_totals.items():
+            if field.startswith('v'):dec(value)
+        mapping={'vServ':('product','vProd'),'vBC':('issqn','vBC'),'vISS':('issqn','vISSQN'),'vPIS':('contributions','vPIS'),'vCOFINS':('contributions','vCOFINS')}
+        mapping.update({f:('issqn',f) for f in ('vDeducao','vOutro','vDescIncond','vDescCond','vISSRet')})
+        for field,(group,source) in mapping.items():
+            expected=sum((dec(i[group].get(source,'0')) for i in service_items),Decimal(0))
+            if abs(expected-dec(service_totals.get(field,'0')))>Decimal('0.02'):raise FiscalError('Soma dos serviços diverge de ISSQNtot/'+field+'.')
     # Standard NF-e total profile. Specialized layouts must get a separate tested parser.
-    additions=['vST','vFCPST','vFrete','vSeg','vOutro','vII','vIPI','vIPIDevol']
+    additions=['vICMSMonoReten','vST','vFCPST','vFrete','vSeg','vOutro','vII','vIPI','vIPIDevol']
     deductions=sum((dec(i['icms'].get('vICMSDeson','0')) for i in items if i['icms'].get('indDeduzDeson','1')!='0'),Decimal(0))
-    calculated=dec(totals['vProd'])-dec(totals.get('vDesc','0'))-deductions+sum((dec(totals.get(f,'0')) for f in additions),Decimal(0))
+    calculated=dec(totals['vProd'])+dec(service_totals.get('vServ','0'))-dec(totals.get('vDesc','0'))-deductions+sum((dec(totals.get(f,'0')) for f in additions),Decimal(0))
     if abs(calculated-dec(totals['vNF']))>Decimal('0.02'):raise FiscalError('Total vNF diverge dos componentes da nota neste perfil. Revisar exceções fiscais; não ajustar valores automaticamente.')
     protocol=root.find('n:protNFe/n:infProt',N)
     if protocol is not None and txt(protocol,'n:chNFe')!=key:raise FiscalError('Chave do protocolo diverge da NF-e.')
@@ -182,7 +227,7 @@ def parse_xml(raw, company=None, operation='auto'):
             schema_doc=E.parse(schema,E.XMLParser(resolve_entities=False,no_network=True))
             xsd=E.XMLSchema(schema_doc); xsd.assertValid(root);schema_status='VALIDADO'
         except (E.XMLSchemaError,E.DocumentInvalid,OSError):raise FiscalError('XML reprovado pelo pacote XSD configurado; conferir versão e raiz do schema.')
-    return {'key':key,'number':values['nNF'],'series':values['serie'],'issued_at':values['dhEmi'],'movement_at':txt(ide,'n:dhSaiEnt'), 'model':values['mod'],'tpNF':values['tpNF'],'flow':flow,'issuer':flatten(emit),'recipient':flatten(dest),'issuer_document':issuer,'recipient_document':recipient,'issuer_name':txt(emit,'n:xNome'),'recipient_name':txt(dest,'n:xNome'),'totals':totals,'items':items,'additional':flatten(inf.find('n:infAdic',N)),'protocol':flatten(protocol),'signature_present':bool(root.findall('.//{http://www.w3.org/2000/09/xmldsig#}Signature')),'signature_validation':'NAO_VERIFICADA','schema_status':schema_status,'sha256':hashlib.sha256(raw).hexdigest(),'warnings':['A validação estrutural não comprova autorização na SEFAZ nem verifica assinatura digital.','TARE, crédito apropriável e ajustes do importador dependem da regra do sistema de destino.']}
+    return {'key':key,'number':values['nNF'],'series':values['serie'],'issued_at':values['dhEmi'],'movement_at':txt(ide,'n:dhSaiEnt'), 'model':values['mod'],'tpNF':values['tpNF'],'flow':flow,'participation':participation,'issuer':flatten(emit),'recipient':flatten(dest),'issuer_document':issuer,'recipient_document':recipient,'issuer_name':txt(emit,'n:xNome'),'recipient_name':txt(dest,'n:xNome'),'totals':totals,'service_totals':service_totals,'items':items,'additional':flatten(inf.find('n:infAdic',N)),'protocol':flatten(protocol),'signature_present':bool(root.findall('.//{http://www.w3.org/2000/09/xmldsig#}Signature')),'signature_validation':'NAO_VERIFICADA','schema_status':schema_status,'sha256':hashlib.sha256(raw).hexdigest(),'warnings':['A validação estrutural não comprova autorização na SEFAZ nem verifica assinatura digital.','TARE, crédito apropriável e ajustes do importador dependem da regra do sistema de destino.']}
 
 # Canonical child order for the supported NF-e reconstruction profile.
 # Dictionary/editing order must never determine XML element order.
@@ -196,6 +241,11 @@ FIELD_ORDER={
 'prod':'cProd cEAN cBarra xProd NCM NVE CEST indEscala CNPJFab cBenef EXTIPI CFOP uCom qCom vUnCom vProd cEANTrib cBarraTrib uTrib qTrib vUnTrib vFrete vSeg vDesc vOutro indTot DI detExport xPed nItemPed nFCI rastro infProdNFF infProdEmb',
 'imposto':'vTotTrib ICMS IPI II ISSQN PIS PISST COFINS COFINSST ICMSUFDest',
 'ICMSTot':'vBC vICMS vICMSDeson vFCPUFDest vICMSUFDest vICMSUFRemet vFCP vBCST vST vFCPST vFCPSTRet qBCMono vICMSMono qBCMonoReten vICMSMonoReten qBCMonoRet vICMSMonoRet vProd vFrete vSeg vDesc vII vIPI vIPIDevol vPIS vCOFINS vOutro vNF vTotTrib',
+'ISSQN':'vBC vAliq vISSQN cMunFG cListServ vDeducao vOutro vDescIncond vDescCond vISSRet indISS cServico cMun cPais nProcesso indIncentivo',
+'ISSQNtot':'vServ vBC vISS vPIS vCOFINS dCompet vDeducao vOutro vDescIncond vDescCond vISSRet cRegTrib',
+'ICMS02':'orig CST qBCMono adRemICMS vICMSMono',
+'ICMS15':'orig CST qBCMono adRemICMS vICMSMono qBCMonoReten adRemICMSReten vICMSMonoReten pRedAdRem motRedAdRem',
+'ICMS53':'orig CST qBCMono adRemICMS vICMSMonoOp pDif vICMSMonoDif vICMSMono qBCMonoDif adRemICMSDif',
 'ICMS61':'orig CST qBCMonoRet adRemICMSRet vICMSMonoRet',
 'ICMS20':'orig CST modBC pRedBC vBC pICMS vICMS vBCFCP pFCP vFCP vICMSDeson motDesICMS indDeduzDeson',
 'ICMS00':'orig CST modBC vBC pICMS vICMS pFCP vFCP',

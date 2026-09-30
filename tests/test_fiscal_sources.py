@@ -24,7 +24,7 @@ def test_zip_report_and_cross_company_rejection(env):
  r=c.post('/api/history/import',data={'company':cid,'file':(io.BytesIO(zipped.getvalue()),'old.zip')},headers=h)
  assert r.status_code==200,r.json
  assert r.json['added']==1 and r.json['failed']==1
- other=c.post('/api/companies',json={'name':'Outra empresa','document':'11222333000181'},headers=h).json['id']
+ other=c.post('/api/companies',json={'name':'Outra empresa','document':'28988409000187'},headers=h).json['id']
  r=c.post('/api/history/import',data={'company':other,'file':(io.BytesIO(RAW),'old.xml')},headers=h)
  assert r.json['failed']==1
  assert c.get('/api/history?company='+other).json['total']==0
@@ -53,3 +53,22 @@ def test_unlinked_event_is_not_archived(env):
  with zipfile.ZipFile(zipped,'w') as z:z.writestr('first-event.xml',event);z.writestr('later-note.xml',RAW)
  r=c.post('/api/history/import',data={'company':cid,'file':(io.BytesIO(zipped.getvalue()),'bundle.zip')},headers=h)
  assert r.json['added']==2 and r.json['failed']==0
+
+
+def test_authorized_third_party_import_keeps_original_and_separate_flow(env):
+ from lxml import etree as E
+ from app.fiscal import NS,N
+ app,c,h,cid=env
+ third=c.post('/api/companies',json={'name':'Transportadora teste','document':'28988409000187'},headers=h).json['id']
+ root=E.fromstring(RAW);inf=root.find('n:NFe/n:infNFe',N)
+ auth=E.SubElement(inf,'{'+NS+'}autXML');E.SubElement(auth,'{'+NS+'}CNPJ').text='28988409000187'
+ raw=E.tostring(root)
+ result=c.post('/api/history/import',data={'company':third,'file':(io.BytesIO(raw),'autorizada.xml')},headers=h)
+ assert result.status_code==200 and result.json['added']==1,result.json
+ row=result.json['items'][0]
+ assert c.get('/api/history/'+row['id']+'/xml').data==raw
+ notes=c.get('/api/history?company='+third+'&view=notes').json
+ assert notes['items'][0]['data']['flow']=='terceiro'
+ assert notes['items'][0]['data']['participation']==['autorizado_xml']
+ plain=c.post('/api/history/import',data={'company':third,'file':(io.BytesIO(RAW),'sem-vinculo.xml')},headers=h)
+ assert plain.json['failed']==1
