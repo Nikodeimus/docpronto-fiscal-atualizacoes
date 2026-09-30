@@ -45,4 +45,8 @@ DPAPI protege uma cópia simples da pasta fora do perfil original; não protege 
 - Histórico, agrupamento e evidências fiscais: rodada com 59 testes aprovados antes da ampliação ISSQN/terceiros.
 - Interface: 23 arquivos de testes JavaScript aprovados.
 
-As rodadas têm testes em comum; os números não devem ser somados como testes únicos. Nenhum teste utilizou certificado real ou enviou manifestação fiscal. A instalação local foi tentada, mas bloqueada pela política de scripts do Windows antes de alterar a versão ativa. O pacote preparado não comprova instalação concluída.
+As rodadas têm testes em comum; os números não devem ser somados como testes únicos. Nenhum teste utilizou certificado real ou enviou manifestação fiscal. A primeira tentativa de instalação foi bloqueada pela política de scripts do Windows. Após autorização do usuário, o instalador foi executado com RemoteSigned somente no processo de instalação, sem mudar a política global. A versão 1.8.33 respondeu à verificação HTTP; o banco passou por quick_check e o cofre existente foi migrado para DPAPI, com verificação de leitura do A1 já cifrado, sem exibir seu conteúdo.
+
+## Próximas pendências
+
+Plano por etapas e critérios de aceite: [pendências do fiscal](superpowers/plans/2026-09-30-pendencias-fiscal.md). Os scripts legados de inicialização ainda usam Bypass; a conclusão desta instalação não encerra essa pendência.

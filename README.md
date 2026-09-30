@@ -63,3 +63,5 @@ Certificados, senhas, banco de dados e documentos de clientes ficam fora do Git.
 ## Revisão 1.8.33 — parecer técnico
 
 A comparação dos 15 apontamentos do parecer sobre a 1.8.19 com o código atual está em [docs/REVISAO-PARECER-1.8.19.md](docs/REVISAO-PARECER-1.8.19.md). Inclui proteção DPAPI do cofre Windows, situação fiscal de cancelamento, ICMS monofásico, ISSQN e participantes terceiros. Leia as limitações do cofre antes de migrar contas Windows. Essa revisão não constitui homologação de produção nem inicia consultas/manifestações fiscais por conta própria.
+
+O plano das próximas correções está em [docs/superpowers/plans/2026-09-30-pendencias-fiscal.md](docs/superpowers/plans/2026-09-30-pendencias-fiscal.md), com dependências, testes e critérios de conclusão.
